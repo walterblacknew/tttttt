@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>ویرایش سطر CSV | اطلاعات مشتریان</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 1rem;
+      background-color: #f1f5f9;
+      font-family: 'Vazirmatn', sans-serif;
+      color: #1e293b;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    form {
+      background: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 1rem;
+      max-width: 600px;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      color: #475569;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.25rem;
+      background: #4f46e5;
+      color: #fff;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #4338ca;
+    }
+  </style>
+</head>
+<body>
+  <h1>ویرایش سطر CSV (اطلاعات مشتریان)</h1>
+
+  <form method="POST">
+    {% for key, val in row.items() %}
+    <label for="{{ key }}">{{ key }}</label>
+    <input type="text" name="{{ key }}" id="{{ key }}" value="{{ val|safe }}">
+    {% endfor %}
+    <button type="submit" class="btn">ذخیره تغییرات</button>
+  </form>
+
+</body>
+</html>

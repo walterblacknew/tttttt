@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تخصیص سهمیه و ارزیابی فروشگاه | پنل ادمین</title>
+  <!-- فونت وزیر -->
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+  <!-- Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #4f46e5;
+      --primary-hover: #4338ca;
+      --secondary-color: #64748b;
+      --success-color: #22c55e;
+      --danger-color: #ef4444;
+      --warning-color: #f97316;
+      --background-color: #f1f5f9;
+      --card-background: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Vazirmatn', sans-serif;
+    }
+
+    body {
+      background-color: var(--background-color);
+      color: var(--text-primary);
+      line-height: 1.5;
+      overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+    }
+
+    .dashboard {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background-color: var(--card-background);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      z-index: 10;
+      transition: transform 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(100%);
+      }
+      .sidebar.active {
+        transform: translateX(0);
+      }
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .sidebar-brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .sidebar-menu {
+      padding: 1.5rem 1rem;
+      flex: 1;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: var(--text-secondary);
+      border-radius: 0.5rem;
+      transition: background-color 0.3s ease;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+    }
+    .menu-item:hover {
+      background-color: #f8fafc;
+      color: var(--primary-color);
+    }
+    .menu-item.active {
+      background-color: var(--primary-color);
+      color: #fff;
+    }
+    .menu-item i {
+      margin-left: 0.75rem;
+    }
+    .menu-label {
+      text-decoration: none;
+      color: inherit;
+      font-weight: 500;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-right: 280px;
+      padding: 2rem;
+      width: calc(100% - 280px);
+      transition: margin-right 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      .main-content {
+        margin-right: 0;
+        width: 100%;
+        padding: 1rem;
+      }
+    }
+
+    /* Header */
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .page-title {
+      font-size: 1.875rem;
+      font-weight: 700;
+    }
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--primary-color);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    .btn-outline {
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-primary);
+    }
+    .btn-outline:hover {
+      background: #f8fafc;
+    }
+
+    /* Grid Container */
+    .grid-container {
+      display: grid;
+      grid-gap: 1.5rem;
+    }
+    @media (min-width: 992px) {
+      .grid-2-col {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-background);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+    .card h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+      width: 100%;
+      padding: 0.625rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .btn-submit {
+      margin-top: 0.5rem;
+    }
+
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    tr:hover td {
+      background-color: #f8fafc;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      border-radius: 0.375rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <i data-lucide="layout-dashboard"></i>
+          <span>پنل مدیریت</span>
+        </div>
+      </div>
+      <nav class="sidebar-menu">
+        <div class="menu-item">
+          <i data-lucide="home"></i>
+          <a class="menu-label" href="{{ url_for('admin_index') }}">داشبورد</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="database"></i>
+          <a class="menu-label" href="{{ url_for('admin_data') }}">مدیریت داده‌ها</a>
+        </div>
+        <div class="menu-item active">
+          <i data-lucide="target"></i>
+          <a class="menu-label" href="{{ url_for('admin_quotas') }}">تخصیص سهمیه</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="users"></i>
+          <a class="menu-label" href="{{ url_for('admin_users') }}">مدیریت کاربران</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="pie-chart"></i>
+          <a class="menu-label" href="{{ url_for('admin_reports') }}">گزارش‌ها</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="bell"></i>
+          <a class="menu-label" href="{{ url_for('admin_alerts') }}">هشدارها</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="settings"></i>
+          <a class="menu-label" href="{{ url_for('admin_settings') }}">تنظیمات</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="map-pin"></i>
+          <a class="menu-label" href="{{ url_for('admin_routes') }}">مدیریت مسیرها</a>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="map"></i>
+          <a class="menu-label" href="{{ url_for('admin_marketer_locations') }}">موقعیت بازاریاب‌ها</a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <div class="content-header">
+        <h1 class="page-title">تخصیص سهمیه و ارزیابی فروشگاه</h1>
+        <div class="header-actions">
+          <button class="btn btn-outline" id="refreshBtn">
+            <i data-lucide="refresh-cw"></i>
+            بروزرسانی
+          </button>
+          <button class="btn btn-primary">
+            <i data-lucide="plus"></i>
+            ایجاد آیتم جدید
+          </button>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="margin-bottom:1rem;">
+            {% for category, msg in messages %}
+              <div class="flash flash-{{ category }}" style="padding:0.75rem; background:#fff; margin-bottom:0.5rem; border-radius:0.5rem;">
+                {{ msg }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="grid-container">
+        <!-- SECTION A: CREATE STORE (with lat/lng) -->
+        <div class="card">
+          <h2>ایجاد فروشگاه (با موقعیت جغرافیایی)</h2>
+          <form method="POST" action="{{ url_for('admin_quotas') }}">
+            {{ storeForm.csrf_token }}
+            <div class="form-group">
+              <label for="storeName">نام فروشگاه</label>
+              {{ storeForm.name(id="storeName", placeholder="مثال: فروشگاه بهار") }}
+            </div>
+            <div class="form-group">
+              <label for="lat">عرض جغرافیایی</label>
+              {{ storeForm.lat(id="lat", placeholder="مثال: 35.6892") }}
+            </div>
+            <div class="form-group">
+              <label for="lng">طول جغرافیایی</label>
+              {{ storeForm.lng(id="lng", placeholder="مثال: 51.3890") }}
+            </div>
+            {{ storeForm.submit(class_="btn btn-primary btn-submit", value="ایجاد فروشگاه") }}
+          </form>
+
+          <!-- List existing stores -->
+          <table>
+            <thead>
+              <tr>
+                <th>ردیف</th>
+                <th>نام فروشگاه</th>
+                <th>عرض جغرافیایی</th>
+                <th>طول جغرافیایی</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stores %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.lat or '-' }}</td>
+                <td>{{ s.lng or '-' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4">هیچ فروشگاهی ثبت نشده است.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SECTION B: EVALUATION PARAMETERS (Weights) -->
+        <div class="card">
+          <h2>پارامترهای ارزیابی (با وزن‌های پویا)</h2>
+          <form method="POST" action="{{ url_for('admin_quotas') }}">
+            {{ evaluationParameterForm.csrf_token }}
+            <div class="form-group">
+              <label for="paramName">نام پارامتر</label>
+              {{ evaluationParameterForm.name(id="paramName", placeholder="مثال: سابقه خرید (تعداد)") }}
+            </div>
+            <div class="form-group">
+              <label for="paramWeight">وزن</label>
+              {{ evaluationParameterForm.weight(id="paramWeight", placeholder="مثال: 1.5") }}
+            </div>
+            {{ evaluationParameterForm.submit(class_="btn btn-primary btn-submit", value="ایجاد/ویرایش") }}
+          </form>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ردیف</th>
+                <th>نام پارامتر</th>
+                <th>وزن</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for param in evaluationParameters %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ param.name }}</td>
+                <td>{{ param.weight }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3">هیچ پارامتری تعریف نشده است.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SECTION C: CREATE A NEW STORE EVALUATION -->
+        <div class="card">
+          <h2>ایجاد ارزیابی جدید برای یک فروشگاه</h2>
+          <form method="POST" action="{{ url_for('admin_quotas') }}">
+            {{ storeEvaluationForm.csrf_token }}
+            <div class="form-group">
+              <label for="storeId">فروشگاه</label>
+              {{ storeEvaluationForm.store_id(id="storeId") }}
+            </div>
+            <div class="form-group">
+              <label for="startDate">تاریخ شروع بازه</label>
+              {{ storeEvaluationForm.start_date(id="startDate") }}
+            </div>
+            <div class="form-group">
+              <label for="endDate">تاریخ پایان بازه</label>
+              {{ storeEvaluationForm.end_date(id="endDate") }}
+            </div>
+            {{ storeEvaluationForm.submit(class_="btn btn-primary btn-submit", value="ایجاد ارزیابی") }}
+          </form>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ردیف</th>
+                <th>فروشگاه</th>
+                <th>تاریخ شروع</th>
+                <th>تاریخ پایان</th>
+                <th>مجموع امتیاز</th>
+                <th>دسته‌بندی</th>
+                <th>زمان ثبت</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ev in storeEvaluations %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ ev.store.name if ev.store else '-' }}</td>
+                <td>{{ ev.start_date }}</td>
+                <td>{{ ev.end_date }}</td>
+                <td>{{ ev.total_score }}</td>
+                <td>{{ ev.category or '-' }}</td>
+                <td>{{ ev.created_at }}</td>
+                <td>
+                  <div class="actions">
+                    <button type="button" class="btn btn-outline btn-sm">
+                      <i data-lucide="edit"></i> امتیازات
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8">هیچ ارزیابی ثبت نشده است.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SECTION D: QUOTA CATEGORIES -->
+        <div class="card">
+          <h2>سهمیه‌ی هر دسته (A+, A, B+, B, C و ...)</h2>
+          <form method="POST" action="{{ url_for('admin_quotas') }}">
+            {{ quotaCategoryForm.csrf_token }}
+            <div class="form-group">
+              <label for="qcCategory">دسته‌بندی</label>
+              {{ quotaCategoryForm.category(id="qcCategory", placeholder="مثال: A+") }}
+            </div>
+            <div class="form-group">
+              <label for="qcMonthly">سهمیه ماهانه</label>
+              {{ quotaCategoryForm.monthly_quota(id="qcMonthly", placeholder="مثال: 100") }}
+            </div>
+            {{ quotaCategoryForm.submit(class_="btn btn-primary btn-submit", value="ذخیره سهمیه") }}
+          </form>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ردیف</th>
+                <th>دسته</th>
+                <th>سهمیه ماهانه</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for qc in quota_list %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ qc.category }}</td>
+                <td>{{ qc.monthly_quota }}</td>
+                <td>
+                  <div class="actions">
+                    <form method="POST" action="{{ url_for('delete_quota_category', qc_id=qc.id) }}">
+                      {{ quotaCategoryForm.csrf_token }}
+                      <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger-color); border-color: var(--danger-color);" onclick="return confirm('آیا مطمئنید؟');">
+                        <i data-lucide="trash-2"></i> حذف
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4">هیچ سهمیه‌ای ثبت نشده است.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Simple refresh button animation
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.addEventListener('click', () => {
+      const icon = refreshBtn.querySelector('i');
+      icon.style.transition = 'transform 0.5s ease';
+      icon.style.transform = 'rotate(360deg)';
+      setTimeout(() => {
+        icon.style.transform = 'rotate(0deg)';
+      }, 500);
+
+      console.log('Refreshing data...');
+    });
+  </script>
+</body>
+</html>
