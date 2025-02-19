@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تنظیم پارامترهای ارزیابی</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #e9ecef, #f1f5f9);
+      font-family: 'Vazirmatn', sans-serif;
+      direction: rtl;
+      padding: 2rem;
+      margin: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #102a43;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+    }
+    th {
+      background-color: #f0f4f8;
+      color: #243b53;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: #334e68;
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .submit-btn:hover {
+      background-color: #243b53;
+    }
+    input[type="number"] {
+      width: 80px;
+      padding: 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+    }
+    select {
+      padding: 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+    }
+    /* Descriptive criteria section styling */
+    .criteria-container {
+      display: none;
+      margin-top: 0.5rem;
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 0.5rem;
+    }
+    .criterion-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .criterion-row input[type="text"],
+    .criterion-row input[type="number"] {
+      flex: 1;
+      padding: 0.4rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.3rem;
+    }
+    .add-btn {
+      background-color: #22c55e;
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .add-btn:hover {
+      background-color: #16a34a;
+    }
+  </style>
+  <script>
+    // Toggle the criteria container when type is changed
+    function toggleCriteria(col) {
+      var typeSelect = document.getElementById('type_' + col);
+      var criteriaContainer = document.getElementById('criteria_container_' + col);
+      if (typeSelect.value === 'descriptive') {
+        criteriaContainer.style.display = 'block';
+      } else {
+        criteriaContainer.style.display = 'none';
+      }
+    }
+    // Add a new criterion row for a given column
+    function addCriterion(col) {
+      var container = document.getElementById('criteria_container_' + col);
+      var row = document.createElement('div');
+      row.className = 'criterion-row';
+      row.innerHTML = '<input type="text" name="criteria_' + col + '[]" placeholder="معیار" required>' +
+                      '<input type="number" step="any" name="score_' + col + '[]" placeholder="نمره" required>' +
+                      '<button type="button" onclick="this.parentElement.remove()" style="background:#ef4444; color:#fff; border:none; border-radius:0.3rem; padding:0.4rem;">حذف</button>';
+      container.appendChild(row);
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>تنظیم پارامترهای ارزیابی</h1>
+    <form method="POST">
+      <input type="hidden" name="action" value="configure">
+      <input type="hidden" name="file_content" value="{{ file_content | safe }}">
+      <table>
+        <thead>
+          <tr>
+            <th>انتخاب</th>
+            <th>نام ستون</th>
+            <th>وزن</th>
+            <th>نوع متغیر</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for col in columns %}
+          <tr>
+            <td>
+              <input type="checkbox" name="use_{{ col }}" id="use_{{ col }}">
+            </td>
+            <td>
+              <label for="use_{{ col }}">{{ col }}</label>
+            </td>
+            <td>
+              <input type="number" step="any" name="weight_{{ col }}" value="1">
+            </td>
+            <td>
+              <select name="type_{{ col }}" id="type_{{ col }}" onchange="toggleCriteria('{{ col }}')">
+                <option value="numeric">عددی</option>
+                <option value="descriptive">توصیفی</option>
+              </select>
+            </td>
+          </tr>
+          <!-- For each column, add a hidden criteria container -->
+          <tr id="criteria_container_{{ col }}" class="criteria-container">
+            <td colspan="4">
+              <strong>تعریف معیارهای نمره‌دهی برای "{{ col }}"</strong>
+              <div id="criteria_list_{{ col }}"></div>
+              <button type="button" class="add-btn" onclick="addCriterion('{{ col }}')">افزودن معیار</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit" class="submit-btn">اعمال تنظیمات و ارزیابی</button>
+    </form>
+  </div>
+</body>
+</html>

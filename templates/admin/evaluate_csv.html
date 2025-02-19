@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>نتیجه ارزیابی با CSV/Excel</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f0f4f8, #e9ecef);
+      font-family: 'Vazirmatn', sans-serif;
+      direction: rtl;
+      padding: 2rem;
+      margin: 0;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #102a43;
+    }
+    h2 {
+      margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid #cbd5e1;
+      text-align: center;
+    }
+    th {
+      background-color: #f0f4f8;
+      color: #243b53;
+    }
+    .section {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>نتیجه ارزیابی با CSV/Excel</h1>
+    
+    <!-- Section: Valid Evaluated Data -->
+    {% if valid_rows %}
+    <div class="section">
+      <h2>داده‌های معتبر</h2>
+      <table>
+        <thead>
+          <tr>
+            {% for key in valid_rows[0].keys() %}
+              <th>{{ key }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in valid_rows %}
+          <tr>
+            {% for value in row.values() %}
+              <td>{{ value }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p>هیچ داده معتبری یافت نشد.</p>
+    {% endif %}
+    
+    <!-- Section: Rows with Missing Data -->
+    {% if missing_rows %}
+    <div class="section">
+      <h2>داده‌های ناقص / مفقود</h2>
+      <table>
+        <thead>
+          <tr>
+            {% for key in missing_rows[0].keys() %}
+              <th>{{ key }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in missing_rows %}
+          <tr>
+            {% for value in row.values() %}
+              <td>{{ value }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

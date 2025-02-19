@@ -10,6 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <!-- Leaflet CSS for map plot -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     :root {
       --primary-color: #4f46e5;
@@ -23,31 +25,31 @@
       --text-primary: #1e293b;
       --text-secondary: #64748b;
       --border-color: #e2e8f0;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
     }
-
+    
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
       font-family: 'Vazirmatn', sans-serif;
     }
-
+    
     body {
       background-color: var(--background-color);
       color: var(--text-primary);
       line-height: 1.5;
       overflow-x: hidden; /* Prevent horizontal scroll on mobile */
     }
-
+    
     /* Layout */
     .dashboard {
       display: flex;
       min-height: 100vh;
       width: 100%;
     }
-
+    
     /* Sidebar */
     .sidebar {
       width: 280px;
@@ -70,7 +72,7 @@
         transform: translateX(0);
       }
     }
-
+    
     .sidebar-header {
       padding: 1.5rem;
       border-bottom: 1px solid var(--border-color);
@@ -83,12 +85,12 @@
       align-items: center;
       gap: 0.75rem;
     }
-
+    
     .sidebar-menu {
       padding: 1.5rem 1rem;
       flex: 1;
     }
-
+    
     .menu-item {
       display: flex;
       align-items: center;
@@ -115,7 +117,7 @@
       text-decoration: none;
       color: inherit;
     }
-
+    
     /* Main Content */
     .main-content {
       margin-right: 280px;
@@ -130,7 +132,7 @@
         padding: 1rem;
       }
     }
-
+    
     /* Header */
     .content-header {
       display: flex;
@@ -147,7 +149,7 @@
       gap: 1rem;
       align-items: center;
     }
-
+    
     /* Stats Grid */
     .stats-grid {
       display: grid;
@@ -199,7 +201,7 @@
     .trend-negative {
       color: var(--danger-color);
     }
-
+    
     /* Charts Grid */
     .charts-grid {
       display: grid;
@@ -247,7 +249,7 @@
       width: 100%;
       height: 300px; /* Adjust as needed */
     }
-
+    
     /* Activity Card */
     .activity-card {
       background: var(--card-background);
@@ -300,7 +302,7 @@
       font-size: 0.875rem;
       color: var(--text-secondary);
     }
-
+    
     /* Buttons */
     .btn {
       padding: 0.625rem 1rem;
@@ -329,8 +331,8 @@
     .btn-outline:hover {
       background: #f8fafc;
     }
-
-    /* Marketer Location Card */
+    
+    /* Marketer Location Card (List + Map Plot) */
     .location-card {
       background: var(--card-background);
       padding: 1.5rem;
@@ -348,8 +350,22 @@
       font-size: 1.125rem;
       font-weight: 600;
     }
+    /* New container for side-by-side list and plot */
+    .location-container {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
     .location-list {
-      margin-top: 1rem;
+      flex: 1;
+      min-width: 250px;
+    }
+    .location-map {
+      flex: 1;
+      min-width: 250px;
+      height: 300px;
+      border-radius: 0.5rem;
+      overflow: hidden;
     }
     .location-item {
       display: flex;
@@ -393,7 +409,7 @@
       background: #fef2f2;
       color: var(--danger-color);
     }
-
+    
     /* CSV PARTIAL PREVIEW */
     .csv-preview-section {
       background: var(--card-background);
@@ -495,7 +511,7 @@
         </div>
       </nav>
     </aside>
-
+    
     <!-- Main Content -->
     <main class="main-content">
       <!-- Header -->
@@ -512,7 +528,7 @@
           </button>
         </div>
       </div>
-
+      
       <!-- Stats Grid -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -528,7 +544,7 @@
             <span>۱۵٪ رشد نسبت به ماه قبل</span>
           </div>
         </div>
-
+        
         <div class="stat-card">
           <div class="stat-header">
             <h3 class="stat-title">بازاریاب‌های فعال</h3>
@@ -542,7 +558,7 @@
             <span>۱۲ بازاریاب جدید</span>
           </div>
         </div>
-
+        
         <div class="stat-card">
           <div class="stat-header">
             <h3 class="stat-title">هشدارهای فعال</h3>
@@ -557,7 +573,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- Charts Grid -->
       <div class="charts-grid">
         <div class="chart-card">
@@ -576,7 +592,7 @@
             <canvas id="salesChart"></canvas>
           </div>
         </div>
-
+        
         <div class="chart-card">
           <div class="chart-header">
             <h3 class="chart-title">توزیع فروش محصولات</h3>
@@ -586,7 +602,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- Recent Activity -->
       <div class="activity-card">
         <div class="chart-header">
@@ -629,30 +645,32 @@
           </div>
         </div>
       </div>
-
-      <!-- Marketer Locations (Live) -->
+      
+      <!-- Marketer Locations (Live: List + Map Plot) -->
       <div class="location-card" id="locationCard">
         <div class="location-header">
           <h3 class="location-title">موقعیت زنده بازاریاب‌ها</h3>
-          <button class="btn btn-outline" onclick="fetchMarketerLocations()">
+          <button class="btn btn-outline" onclick="updateMarketerLocations()">
             <i data-lucide="refresh-cw"></i> به‌روزرسانی دستی
           </button>
         </div>
-        <div class="location-list" id="locationList">
-          <!-- Filled dynamically via fetchMarketerLocations() -->
+        <!-- New container with two columns: list and map plot -->
+        <div class="location-container">
+          <div class="location-list" id="locationList">
+            <!-- Marketer list will be rendered here -->
+          </div>
+          <div class="location-map" id="locationMapPlot">
+            <!-- Leaflet map will be rendered here -->
+          </div>
         </div>
       </div>
-
-      <!-- CSV PARTIAL PREVIEW SECTION -->
+      
+      <!-- CSV PARTIAL PREVIEW SECTION (Routes) -->
       <div class="csv-preview-section">
         <h2>اطلاعات مسیر (پیش‌نمایش ۱۰ سطری)</h2>
         <div class="csv-preview-search">
-          <input
-            type="text"
-            id="routeSearch"
-            placeholder="جستجو در اطلاعات مسیر..."
-            oninput="filterRoutePreview()"
-          />
+          <input type="text" id="routeSearch" placeholder="جستجو در اطلاعات مسیر..." oninput="filterRoutePreview()" />
+          <button type="button" class="btn" onclick="filterRoutePreview()">جستجو</button>
         </div>
         <div class="csv-preview-box">
           {% if route_data %}
@@ -674,16 +692,12 @@
           <a class="btn btn-primary" href="{{ url_for('admin_routes_csv') }}">مدیریت کامل اطلاعات مسیر</a>
         </div>
       </div>
-
+      
+      <!-- CSV PARTIAL PREVIEW SECTION (Customers) -->
       <div class="csv-preview-section">
         <h2>اطلاعات مشتریان (پیش‌نمایش ۱۰ سطری)</h2>
         <div class="csv-preview-search">
-          <input
-            type="text"
-            id="customerSearch"
-            placeholder="جستجو در اطلاعات مشتریان..."
-            oninput="filterCustomerPreview()"
-          />
+          <input type="text" id="customerSearch" placeholder="جستجو در اطلاعات مشتریان..." oninput="filterCustomerPreview()" />
         </div>
         <div class="csv-preview-box">
           {% if customer_data %}
@@ -705,17 +719,19 @@
           <a class="btn btn-primary" href="{{ url_for('admin_customers_csv') }}">مدیریت کامل اطلاعات مشتریان</a>
         </div>
       </div>
-
+      
     </main>
   </div>
-
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize Lucide icons
     lucide.createIcons();
-
+    
     // Sales Chart
     const salesCtx = document.getElementById('salesChart')?.getContext('2d');
-    if(salesCtx) {
+    if (salesCtx) {
       new Chart(salesCtx, {
         type: 'line',
         data: {
@@ -746,9 +762,7 @@
               position: 'top',
               rtl: true,
               labels: {
-                font: {
-                  family: 'Vazirmatn'
-                }
+                font: { family: 'Vazirmatn' }
               }
             }
           },
@@ -759,38 +773,29 @@
                 callback: function(value) {
                   return new Intl.NumberFormat('fa-IR').format(value) + ' ریال';
                 },
-                font: {
-                  family: 'Vazirmatn'
-                }
+                font: { family: 'Vazirmatn' }
               }
             },
             x: {
               ticks: {
-                font: {
-                  family: 'Vazirmatn'
-                }
+                font: { family: 'Vazirmatn' }
               }
             }
           }
         }
       });
     }
-
+    
     // Products Chart
     const productsCtx = document.getElementById('productsChart')?.getContext('2d');
-    if(productsCtx) {
+    if (productsCtx) {
       new Chart(productsCtx, {
         type: 'doughnut',
         data: {
           labels: ['محصول A', 'محصول B', 'محصول C', 'محصول D'],
           datasets: [{
             data: [35, 25, 20, 20],
-            backgroundColor: [
-              '#4f46e5',
-              '#93c5fd',
-              '#22c55e',
-              '#f97316'
-            ]
+            backgroundColor: ['#4f46e5', '#93c5fd', '#22c55e', '#f97316']
           }]
         },
         options: {
@@ -801,16 +806,14 @@
               position: 'right',
               rtl: true,
               labels: {
-                font: {
-                  family: 'Vazirmatn'
-                }
+                font: { family: 'Vazirmatn' }
               }
             }
           }
         }
       });
     }
-
+    
     // Menu item highlighting
     const menuItems = document.querySelectorAll('.menu-item');
     menuItems.forEach(item => {
@@ -819,10 +822,10 @@
         item.classList.add('active');
       });
     });
-
+    
     // Refresh button animation
     const refreshBtn = document.getElementById('refreshBtn');
-    if(refreshBtn){
+    if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         const icon = refreshBtn.querySelector('i');
         icon.style.transition = 'transform 0.5s ease';
@@ -830,66 +833,108 @@
         setTimeout(() => {
           icon.style.transform = 'rotate(0deg)';
         }, 500);
+        // Also update marketer locations manually
+        updateMarketerLocations();
       });
     }
-
-    // Live Marketer Locations
-    async function fetchMarketerLocations() {
+    
+    // Global variables for Leaflet map and markers
+    let marketerMap; 
+    let marketerMarkers = [];
+    
+    // Initialize Leaflet map in the "locationMapPlot" div
+    function initMarketerMap() {
+      marketerMap = L.map('locationMapPlot').setView([35.6892, 51.3890], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(marketerMap);
+    }
+    
+    // Function to update both the list and the map plot
+    async function updateMarketerLocations() {
       try {
         const response = await fetch('/api/observer/marketer-locations');
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
         const data = await response.json();
-
-        const locationList = document.getElementById('locationList');
-        if(!locationList) return;
-        locationList.innerHTML = '';
-
-        if (Array.isArray(data) && data.length > 0) {
-          data.forEach(marketer => {
-            const locationItem = document.createElement('div');
-            locationItem.classList.add('location-item');
-
-            let statusClass = 'status-inactive';
-            if (marketer.lat && marketer.lng) {
-              statusClass = 'status-active';
-            }
-
-            locationItem.innerHTML = `
-              <div class="location-status ${statusClass}">
-                <i data-lucide="${statusClass === 'status-active' ? 'check-circle' : 'x-circle'}"></i>
-              </div>
-              <div class="location-info">
-                <div class="marketer-name">${marketer.name}</div>
-                <div class="marketer-coords">مختصات: ${marketer.lat || '-'}, ${marketer.lng || '-'}</div>
-                <div class="marketer-time">آخرین بروزرسانی: ${marketer.last_update || '-'}</div>
-              </div>
-            `;
-            locationList.appendChild(locationItem);
-          });
-          lucide.createIcons();
-        } else {
-          locationList.innerHTML = '<p>هیچ بازاریاب فعالی یافت نشد.</p>';
-        }
+        renderMarketerList(data);
+        updateMarketerMap(data);
       } catch (error) {
         console.error('Error fetching marketer locations:', error);
         alert('خطا در دریافت موقعیت بازاریاب‌ها');
       }
     }
-
-    setInterval(fetchMarketerLocations, 30000);
-    fetchMarketerLocations();
-
+    
+    // Render the marketer list (in the left column)
+    function renderMarketerList(data) {
+      const locationList = document.getElementById('locationList');
+      if (!locationList) return;
+      locationList.innerHTML = '';
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach(marketer => {
+          const locationItem = document.createElement('div');
+          locationItem.classList.add('location-item');
+          
+          let statusClass = 'status-inactive';
+          if (marketer.lat && marketer.lng) {
+            statusClass = 'status-active';
+          }
+          
+          locationItem.innerHTML = `
+            <div class="location-status ${statusClass}">
+              <i data-lucide="${statusClass === 'status-active' ? 'check-circle' : 'x-circle'}"></i>
+            </div>
+            <div class="location-info">
+              <div class="marketer-name">${marketer.name}</div>
+              <div class="marketer-coords">مختصات: ${marketer.lat || '-'}, ${marketer.lng || '-'}</div>
+              <div class="marketer-time">آخرین بروزرسانی: ${marketer.last_update || '-'}</div>
+            </div>
+          `;
+          locationList.appendChild(locationItem);
+        });
+        lucide.createIcons();
+      } else {
+        locationList.innerHTML = '<p>هیچ بازاریاب فعالی یافت نشد.</p>';
+      }
+    }
+    
+    // Update the map plot with new markers
+    function updateMarketerMap(data) {
+      // Remove existing markers
+      marketerMarkers.forEach(marker => marketerMap.removeLayer(marker));
+      marketerMarkers = [];
+      if (Array.isArray(data)) {
+        data.forEach(marketer => {
+          const lat = parseFloat(marketer.lat);
+          const lng = parseFloat(marketer.lng);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const marker = L.marker([lat, lng]).addTo(marketerMap)
+              .bindPopup(`<strong>${marketer.name}</strong><br>آخرین بروزرسانی: ${marketer.last_update}`);
+            marketerMarkers.push(marker);
+          }
+        });
+      }
+    }
+    
+    // Initialize map on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      initMarketerMap();
+      updateMarketerLocations();
+    });
+    
+    // Auto-refresh every 30 seconds
+    setInterval(updateMarketerLocations, 30000);
+    
     // PARTIAL PREVIEW for CSV data
     const routeData = JSON.parse('{{ route_data|tojson|safe }}' || '[]');
     const customerData = JSON.parse('{{ customer_data|tojson|safe }}' || '[]');
-
+    
     const routePreviewBody = document.getElementById('routePreviewBody');
     const customerPreviewBody = document.getElementById('customerPreviewBody');
-
+    
     function renderRoutePreview(rows) {
-      if(!routePreviewBody) return;
+      if (!routePreviewBody) return;
       routePreviewBody.innerHTML = '';
       rows.forEach(row => {
         const tr = document.createElement('tr');
@@ -901,9 +946,9 @@
         routePreviewBody.appendChild(tr);
       });
     }
-
+    
     function renderCustomerPreview(rows) {
-      if(!customerPreviewBody) return;
+      if (!customerPreviewBody) return;
       customerPreviewBody.innerHTML = '';
       rows.forEach(row => {
         const tr = document.createElement('tr');
@@ -915,8 +960,8 @@
         customerPreviewBody.appendChild(tr);
       });
     }
-
-    // Filter partial preview
+    
+    // Filter partial preview for routes and customers
     function filterRoutePreview() {
       const query = document.getElementById('routeSearch').value.toLowerCase().trim();
       const filtered = routeData.filter(row =>
@@ -924,7 +969,7 @@
       );
       renderRoutePreview(filtered);
     }
-
+    
     function filterCustomerPreview() {
       const query = document.getElementById('customerSearch').value.toLowerCase().trim();
       const filtered = customerData.filter(row =>
@@ -932,9 +977,9 @@
       );
       renderCustomerPreview(filtered);
     }
-
-    if(routeData.length > 0) renderRoutePreview(routeData);
-    if(customerData.length > 0) renderCustomerPreview(customerData);
+    
+    if (routeData.length > 0) renderRoutePreview(routeData);
+    if (customerData.length > 0) renderCustomerPreview(customerData);
   </script>
 </body>
 </html>
