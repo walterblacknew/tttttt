@@ -20,7 +20,7 @@ import csv
 import io
 import pandas as pd
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask import session
 def create_admin_user():
     """Ensure an admin user named 'admin' exists."""
     admin_user = User.query.filter_by(username='admin').first()
@@ -171,13 +171,22 @@ def create_app():
         if current_user.role != 'admin':
             flash('دسترسی غیرمجاز!', 'danger')
             return redirect(url_for('admin_customers_csv'))
+
         file = request.files.get('customer_csv')
+        province = request.form.get('province')
+
         if not file:
             flash('هیچ فایلی انتخاب نشده است.', 'danger')
             return redirect(url_for('admin_customers_csv'))
+
+        if not province:
+            flash('لطفاً استان را انتخاب کنید.', 'danger')
+            return redirect(url_for('admin_customers_csv'))
+
         try:
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             csv_reader = csv.DictReader(stream)
+
             for row in csv_reader:
                 report = CustomerReport(
                     textbox29=row.get('Textbox29'),
@@ -191,15 +200,112 @@ def create_app():
                     latitude=safe_float(row.get('Latitude')),
                     textbox4=row.get('Textbox4'),
                     textbox10=row.get('Textbox10'),
+                    province=province,  # Add the province
                     created_at=datetime.now(timezone.utc)
                 )
                 db.session.add(report)
+
             db.session.commit()
-            flash('فایل CSV اطلاعات مشتریان با موفقیت بارگذاری و ذخیره شد.', 'success')
+            flash(f'فایل CSV اطلاعات مشتریان برای استان {province} با موفقیت بارگذاری و ذخیره شد.', 'success')
         except Exception as e:
             db.session.rollback()
             flash(f'خطا در پردازش فایل CSV: {e}', 'danger')
         return redirect(url_for('admin_customers_csv'))
+
+    @app.route('/admin/customers-csv/preview/<province>')
+    @login_required
+    def preview_province_customers(province):
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Number of records per page
+
+        customers = CustomerReport.query.filter_by(province=province) \
+            .order_by(CustomerReport.created_at.desc()) \
+            .paginate(page=page, per_page=per_page, error_out=False)
+
+        customer_data = [{
+            'Textbox29': c.textbox29,
+            'Caption': c.caption,
+            'bname': c.bname,
+            'Number': c.number,
+            'Name': c.name,
+            'Textbox16': c.textbox16,
+            'Textbox12': c.textbox12,
+            'Longitude': c.longitude,
+            'Latitude': c.latitude,
+            'Textbox4': c.textbox4,
+            'Textbox10': c.textbox10,
+            'Province': c.province,
+            'تاریخ_ایجاد': c.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        } for c in customers.items]
+
+        return jsonify({
+            'data': customer_data,
+            'total': customers.total,
+            'pages': customers.pages,
+            'current_page': customers.page
+        })
+
+    @app.route('/admin/customers-csv/province/<province>/delete', methods=['POST'])
+    @login_required
+    def delete_province_customers(province):
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        try:
+            CustomerReport.query.filter_by(province=province).delete()
+            db.session.commit()
+            flash(f'تمام رکوردهای استان {province} با موفقیت حذف شدند.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'خطا در حذف رکوردها: {e}', 'danger')
+
+        return redirect(url_for('admin_customers_csv'))
+
+    def upgrade_customer_report():
+        """Add province column to customer_report table"""
+        with app.app_context():
+            # Add the province column if it doesn't exist
+            inspector = db.inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('customer_report')]
+
+            if 'province' not in columns:
+                # Create the province column
+                db.engine.execute('ALTER TABLE customer_report ADD COLUMN province VARCHAR(100)')
+
+                # Set default province for existing records
+                db.engine.execute("UPDATE customer_report SET province = 'نامشخص' WHERE province IS NULL")
+
+                db.session.commit()
+
+    @app.route('/admin/customers-csv/province/<province>')
+    @login_required
+    def get_province_customers(province):
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        customers = CustomerReport.query.filter_by(province=province).all()
+        customer_data = [{
+            'Textbox29': c.textbox29,
+            'Caption': c.caption,
+            'bname': c.bname,
+            'Number': c.number,
+            'Name': c.name,
+            'Textbox16': c.textbox16,
+            'Textbox12': c.textbox12,
+            'Longitude': c.longitude,
+            'Latitude': c.latitude,
+            'Textbox4': c.textbox4,
+            'Textbox10': c.textbox10,
+            'Province': c.province,
+            'تاریخ_ایجاد': c.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        } for c in customers]
+
+        return jsonify(customer_data)
+
+
 
     # --------------------- FULL-SCREEN CSV PAGES (Existing) ---------------------
     @app.route('/admin/routes-csv', methods=['GET'])
@@ -225,23 +331,123 @@ def create_app():
         if current_user.role != 'admin':
             flash('دسترسی غیرمجاز!', 'danger')
             return redirect(url_for('dashboard'))
-        customer_reports = CustomerReport.query.all()
-        customer_data = [{
-            'Textbox29': c.textbox29,
-            'Caption': c.caption,
-            'bname': c.bname,
-            'Number': c.number,
-            'Name': c.name,
-            'Textbox16': c.textbox16,
-            'Textbox12': c.textbox12,
-            'Longitude': c.longitude,
-            'Latitude': c.latitude,
-            'Textbox4': c.textbox4,
-            'Textbox10': c.textbox10,
-            'تاریخ_ایجاد': c.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        } for c in customer_reports]
-        return render_template('admin/customers_csv.html', customer_data=customer_data)
 
+        try:
+            # Create provinces if they don't exist
+            if Province.query.count() == 0:
+                provinces_data = [
+                    ("تهران", 13267637),
+                    ("خراسان رضوی", 6434501),
+                    ("اصفهان", 5120850),
+                    ("فارس", 4851274),
+                    ("خوزستان", 4710509),
+                    ("آذربایجان شرقی", 3909652),
+                    ("مازندران", 3283582),
+                    ("آذربایجان غربی", 3265219),
+                    ("کرمان", 3164718),
+                    ("سیستان و بلوچستان", 2775014),
+                    ("البرز", 2712400),
+                    ("گیلان", 2530696),
+                    ("کرمانشاه", 1952434),
+                    ("لرستان", 1760649),
+                    ("همدان", 1738234),
+                    ("گلستان", 1777014),
+                    ("کردستان", 1603011),
+                    ("هرمزگان", 1578183),
+                    ("مرکزی", 1429475),
+                    ("اردبیل", 1270420),
+                    ("قزوین", 1201565),
+                    ("قم", 1151672),
+                    ("یزد", 1074428),
+                    ("زنجان", 1015734),
+                    ("بوشهر", 1032949),
+                    ("چهارمحال و بختیاری", 895263),
+                    ("خراسان شمالی", 867727),
+                    ("کهگیلویه و بویراحمد", 658629),
+                    ("خراسان جنوبی", 622534),
+                    ("سمنان", 631218),
+                    ("ایلام", 557599)
+                ]
+
+                for name, population in provinces_data:
+                    province = Province(name=name, population=population)
+                    db.session.add(province)
+
+                try:
+                    db.session.commit()
+                    print("Provinces initialized successfully")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Error initializing provinces: {e}")
+                    flash('خطا در ایجاد استان‌ها', 'danger')
+
+            # Get all provinces for the dropdown
+            provinces = Province.query.order_by(Province.name).all()
+            print(f"Found {len(provinces)} provinces")
+            for p in provinces:
+                print(f"Province: {p.name}")
+
+            # Get all customer reports
+            all_customers = CustomerReport.query.all()
+            print(f"Found {len(all_customers)} customers")
+
+            # Group data by province
+            customer_data_by_province = {}
+            column_headers = []
+
+            if all_customers:
+                # Get headers from first record
+                sample_data = {
+                    'Textbox29': all_customers[0].textbox29,
+                    'Caption': all_customers[0].caption,
+                    'bname': all_customers[0].bname,
+                    'Number': all_customers[0].number,
+                    'Name': all_customers[0].name,
+                    'Textbox16': all_customers[0].textbox16,
+                    'Textbox12': all_customers[0].textbox12,
+                    'Longitude': all_customers[0].longitude,
+                    'Latitude': all_customers[0].latitude,
+                    'Textbox4': all_customers[0].textbox4,
+                    'Textbox10': all_customers[0].textbox10,
+                    'Province': all_customers[0].province,
+                    'تاریخ_ایجاد': all_customers[0].created_at.strftime('%Y-%m-%d %H:%M:%S')
+                }
+                column_headers = list(sample_data.keys())
+
+                # Group by province
+                for customer in all_customers:
+                    province_name = customer.province or 'نامشخص'
+
+                    if province_name not in customer_data_by_province:
+                        customer_data_by_province[province_name] = []
+
+                    customer_data = {
+                        'Textbox29': customer.textbox29,
+                        'Caption': customer.caption,
+                        'bname': customer.bname,
+                        'Number': customer.number,
+                        'Name': customer.name,
+                        'Textbox16': customer.textbox16,
+                        'Textbox12': customer.textbox12,
+                        'Longitude': customer.longitude,
+                        'Latitude': customer.latitude,
+                        'Textbox4': customer.textbox4,
+                        'Textbox10': customer.textbox10,
+                        'Province': customer.province,
+                        'تاریخ_ایجاد': customer.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    customer_data_by_province[province_name].append(customer_data)
+
+            return render_template(
+                'admin/customers_csv.html',
+                provinces=provinces,
+                customer_data_by_province=customer_data_by_province,
+                column_headers=column_headers
+            )
+        except Exception as e:
+            print(f"Error in admin_customers_csv: {str(e)}")
+            flash(f'خطا در بارگذاری صفحه: {str(e)}', 'danger')
+            return redirect(url_for('dashboard'))
     @app.route('/admin/customers-csv/map')
     @login_required
     def admin_customers_csv_map():
@@ -468,12 +674,12 @@ def create_app():
         if current_user.role != 'admin':
             flash('دسترسی غیرمجاز!', 'danger')
             return redirect(url_for('dashboard'))
-        
+
         # Check if provinces already exist
         if Province.query.count() > 0:
             flash('استان‌ها قبلاً اضافه شده‌اند.', 'info')
-            return redirect(url_for('admin_quotas'))
-        
+            return redirect(url_for('admin_customers_csv'))
+
         # Province data (name, population)
         provinces_data = [
             ("تهران", 13267637),
@@ -508,19 +714,19 @@ def create_app():
             ("سمنان", 631218),
             ("ایلام", 557599)
         ]
-        
+
         for name, population in provinces_data:
             province = Province(name=name, population=population)
             db.session.add(province)
-        
+
         try:
             db.session.commit()
             flash('استان‌ها با موفقیت اضافه شدند.', 'success')
         except Exception as e:
             db.session.rollback()
             flash(f'خطا در اضافه کردن استان‌ها: {str(e)}', 'danger')
-        
-        return redirect(url_for('admin_quotas'))
+
+        return redirect(url_for('admin_customers_csv'))
 
     @app.route('/admin/province_targets')
     @login_required
@@ -528,27 +734,142 @@ def create_app():
         if current_user.role != 'admin':
             flash('دسترسی غیرمجاز!', 'danger')
             return redirect(url_for('dashboard'))
-        
+
         # Get provinces and targets
         provinces = Province.query.order_by(Province.name).all()
-        
+
         # Get the latest target for each province
         province_targets = {}
         for province in provinces:
             target = ProvinceTarget.query.filter_by(province_id=province.id).order_by(ProvinceTarget.id.desc()).first()
             if target:
                 province_targets[province.id] = target
-        
+
+        # Get customers by province
+        customers_by_province = {}
+        for province in provinces:
+            customers = CustomerReport.query.filter_by(province=province.name).all()
+            customers_by_province[province.id] = customers
+
+        # Get all grade mappings for allocation by grade
+        grade_mappings = GradeMapping.query.order_by(GradeMapping.min_score.desc()).all()
+
+        # Count customers by grade for each province
+        customer_grades_by_province = {}
+        for province_id, customers in customers_by_province.items():
+            grade_counts = {}
+            for grade_mapping in grade_mappings:
+                grade_counts[grade_mapping.grade_letter] = 0
+
+            # Count ungraded customers too
+            grade_counts['بدون درجه'] = 0
+
+            for customer in customers:
+                if customer.grade in grade_counts:
+                    grade_counts[customer.grade] += 1
+                else:
+                    grade_counts['بدون درجه'] += 1
+
+            customer_grades_by_province[province_id] = grade_counts
+
+        # Get grade weights from session or set defaults
+        grade_weights = session.get('grade_weights', {})
+
+        # If no weights in session, set defaults based on min_score
+        if not grade_weights:
+            for grade_mapping in grade_mappings:
+                # Set weights based on min_score (higher score = higher weight)
+                grade_weights[grade_mapping.grade_letter] = grade_mapping.min_score / 100
+
+            # Default weight for ungraded customers
+            grade_weights['بدون درجه'] = 0.5
+
         # Check what capacities were set (for table headers)
         has_liter = any(t.liter_capacity is not None for t in province_targets.values()) if province_targets else False
-        has_shrink = any(t.shrink_capacity is not None for t in province_targets.values()) if province_targets else False
-        
-        return render_template('admin/province_targets.html', 
-                            provinces=provinces,
-                            province_targets=province_targets,
-                            has_liter=has_liter,
-                            has_shrink=has_shrink)
+        has_shrink = any(
+            t.shrink_capacity is not None for t in province_targets.values()) if province_targets else False
 
+        # Calculate per-customer allocation by grade
+        allocation_by_province_and_grade = {}
+
+        for province_id, target in province_targets.items():
+            if province_id not in customer_grades_by_province:
+                continue
+
+            grade_counts = customer_grades_by_province[province_id]
+            allocation_by_grade = {}
+
+            # Calculate total weighted count
+            total_weighted_count = 0
+            for grade, count in grade_counts.items():
+                weight = grade_weights.get(grade, 0.5)  # Default weight if grade not found
+                total_weighted_count += count * weight
+
+            # Calculate allocation per customer by grade
+            for grade, count in grade_counts.items():
+                if count == 0 or total_weighted_count == 0:
+                    allocation_by_grade[grade] = {
+                        'liter': None,
+                        'shrink': None,
+                        'count': count
+                    }
+                    continue
+
+                weight = grade_weights.get(grade, 0.5)
+
+                # Calculate total allocation for this grade group
+                if has_liter and target.liter_capacity is not None:
+                    liter_per_customer = (
+                                                     target.liter_capacity * weight * count / total_weighted_count) / count if count > 0 else 0
+                else:
+                    liter_per_customer = None
+
+                if has_shrink and target.shrink_capacity is not None:
+                    shrink_per_customer = (
+                                                      target.shrink_capacity * weight * count / total_weighted_count) / count if count > 0 else 0
+                else:
+                    shrink_per_customer = None
+
+                allocation_by_grade[grade] = {
+                    'liter': liter_per_customer,
+                    'shrink': shrink_per_customer,
+                    'count': count
+                }
+
+            allocation_by_province_and_grade[province_id] = allocation_by_grade
+
+        return render_template('admin/province_targets.html',
+                               provinces=provinces,
+                               province_targets=province_targets,
+                               has_liter=has_liter,
+                               has_shrink=has_shrink,
+                               customers_by_province=customers_by_province,
+                               customer_grades_by_province=customer_grades_by_province,
+                               grade_mappings=grade_mappings,
+                               grade_weights=grade_weights,
+                               allocation_by_province_and_grade=allocation_by_province_and_grade)
+
+    @app.route('/admin/update_grade_weights', methods=['POST'])
+    @login_required
+    def update_grade_weights():
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Get data from the form
+        weights = {}
+        for key, value in request.form.items():
+            if key.startswith('weight_'):
+                grade = key[7:]  # Remove 'weight_' prefix
+                try:
+                    weights[grade] = float(value)
+                except ValueError:
+                    pass
+
+        # Store weights in session for persistence
+        session['grade_weights'] = weights
+
+        flash('وزن‌های درجه‌بندی با موفقیت به‌روزرسانی شدند.', 'success')
+        return redirect(url_for('admin_province_targets'))
     # --------------------- ADMIN: EVALUATE CUSTOMER (Single Evaluation) ---------------------
     @app.route('/admin/evaluate_customer/<int:customer_id>', methods=['GET', 'POST'], endpoint='evaluate_customer')
     @login_required

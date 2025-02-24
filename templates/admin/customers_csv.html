@@ -154,7 +154,7 @@
         <label for="customer_csv">بارگذاری فایل CSV اطلاعات مشتریان:</label>
         <input type="file" id="customer_csv" name="customer_csv" accept=".csv" required>
       </div>
-      
+
       <div style="margin-bottom: 1rem;">
         <label for="province">استان:</label>
         <select id="province" name="province" required>
@@ -164,7 +164,7 @@
           {% endfor %}
         </select>
       </div>
-      
+
       <button type="submit" class="btn">بارگذاری</button>
     </form>
   </div>
@@ -190,13 +190,13 @@
             تعداد رکورد: {{ province_data|length }}
           </div>
         </div>
-        
+
         <div class="search-box">
-          <input type="text" 
-                 placeholder="جستجو در داده‌های {{ province_name }}..." 
+          <input type="text"
+                 placeholder="جستجو در داده‌های {{ province_name }}..."
                  onkeyup="filterProvinceData('{{ province_name }}', this.value)">
         </div>
-        
+
         <div class="table-wrapper">
           <table>
             <thead>
@@ -242,18 +242,18 @@
       query = query.toLowerCase();
       const tableBody = document.getElementById(`tableBody${province.replace(' ', '')}`);
       const rows = tableBody.getElementsByTagName('tr');
-      
+
       for (let row of rows) {
         const cells = row.getElementsByTagName('td');
         let found = false;
-        
+
         for (let cell of cells) {
           if (cell.textContent.toLowerCase().includes(query)) {
             found = true;
             break;
           }
         }
-        
+
         row.style.display = found ? '' : 'none';
       }
     }
