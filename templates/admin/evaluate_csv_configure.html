@@ -95,6 +95,85 @@
     .add-btn:hover {
       background-color: #16a34a;
     }
+    .help-text {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+      line-height: 1.5;
+    }
+    /* Styles for existing criteria table */
+    .criteria-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0;
+    }
+
+    .criteria-table th,
+    .criteria-table td {
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+    }
+
+    .criteria-table th {
+      background: #f8fafc;
+      font-weight: 500;
+    }
+
+    .existing-criterion-text,
+    .existing-criterion-score {
+      width: 100%;
+      padding: 0.25rem;
+      border: 1px solid transparent;
+      background: transparent;
+      text-align: center;
+    }
+
+    .existing-criterion-text.editing,
+    .existing-criterion-score.editing {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+    }
+
+    .criterion-actions {
+      white-space: nowrap;
+    }
+
+    .btn-edit, .btn-delete, .btn-save, .btn-cancel {
+      padding: 0.25rem 0.5rem;
+      margin: 0 0.125rem;
+      border: none;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .btn-edit {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-delete {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-save {
+      background: #22c55e;
+      color: white;
+    }
+
+    .btn-cancel {
+      background: #64748b;
+      color: white;
+    }
+
+    .existing-criteria {
+      margin-bottom: 1rem;
+      background: #f8fafc;
+      padding: 0.75rem;
+      border-radius: 0.375rem;
+    }
   </style>
   <script>
     // Toggle the criteria container when type is changed
@@ -107,9 +186,10 @@
         criteriaContainer.style.display = 'none';
       }
     }
+    
     // Add a new criterion row for a given column
     function addCriterion(col) {
-      var container = document.getElementById('criteria_container_' + col);
+      var container = document.getElementById('criteria_list_' + col);
       var row = document.createElement('div');
       row.className = 'criterion-row';
       row.innerHTML = '<input type="text" name="criteria_' + col + '[]" placeholder="معیار" required>' +
@@ -117,11 +197,106 @@
                       '<button type="button" onclick="this.parentElement.remove()" style="background:#ef4444; color:#fff; border:none; border-radius:0.3rem; padding:0.4rem;">حذف</button>';
       container.appendChild(row);
     }
+    
+    // Edit an existing criterion
+    function editCriterion(btn) {
+      const row = btn.closest('tr');
+      const textInput = row.querySelector('.existing-criterion-text');
+      const scoreInput = row.querySelector('.existing-criterion-score');
+      const editBtn = row.querySelector('.btn-edit');
+      const deleteBtn = row.querySelector('.btn-delete');
+      const saveBtn = row.querySelector('.btn-save');
+      const cancelBtn = row.querySelector('.btn-cancel');
+      
+      // Store original values
+      textInput.dataset.original = textInput.value;
+      scoreInput.dataset.original = scoreInput.value;
+      
+      // Make editable
+      textInput.readOnly = false;
+      scoreInput.readOnly = false;
+      textInput.classList.add('editing');
+      scoreInput.classList.add('editing');
+      
+      // Toggle buttons
+      editBtn.style.display = 'none';
+      deleteBtn.style.display = 'none';
+      saveBtn.style.display = 'inline-block';
+      cancelBtn.style.display = 'inline-block';
+    }
+
+    function cancelEdit(btn) {
+      const row = btn.closest('tr');
+      const textInput = row.querySelector('.existing-criterion-text');
+      const scoreInput = row.querySelector('.existing-criterion-score');
+      const editBtn = row.querySelector('.btn-edit');
+      const deleteBtn = row.querySelector('.btn-delete');
+      const saveBtn = row.querySelector('.btn-save');
+      const cancelBtn = row.querySelector('.btn-cancel');
+      
+      // Restore original values
+      textInput.value = textInput.dataset.original;
+      scoreInput.value = scoreInput.dataset.original;
+      
+      // Make readonly again
+      textInput.readOnly = true;
+      scoreInput.readOnly = true;
+      textInput.classList.remove('editing');
+      scoreInput.classList.remove('editing');
+      
+      // Toggle buttons
+      editBtn.style.display = 'inline-block';
+      deleteBtn.style.display = 'inline-block';
+      saveBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
+    }
+
+    function saveCriterion(btn) {
+      const row = btn.closest('tr');
+      const textInput = row.querySelector('.existing-criterion-text');
+      const scoreInput = row.querySelector('.existing-criterion-score');
+      const editBtn = row.querySelector('.btn-edit');
+      const deleteBtn = row.querySelector('.btn-delete');
+      const saveBtn = row.querySelector('.btn-save');
+      const cancelBtn = row.querySelector('.btn-cancel');
+      
+      // Validate
+      if (!textInput.value.trim() || isNaN(parseFloat(scoreInput.value))) {
+        alert('لطفاً معیار و نمره را به درستی وارد کنید.');
+        return;
+      }
+      
+      // Update dataset to new values
+      textInput.dataset.original = textInput.value;
+      scoreInput.dataset.original = scoreInput.value;
+      
+      // Make readonly again
+      textInput.readOnly = true;
+      scoreInput.readOnly = true;
+      textInput.classList.remove('editing');
+      scoreInput.classList.remove('editing');
+      
+      // Toggle buttons
+      editBtn.style.display = 'inline-block';
+      deleteBtn.style.display = 'inline-block';
+      saveBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
+    }
+
+    function deleteCriterion(btn) {
+      if (confirm('آیا از حذف این معیار مطمئن هستید؟')) {
+        const row = btn.closest('tr');
+        row.remove();
+      }
+    }
   </script>
 </head>
 <body>
   <div class="container">
     <h1>تنظیم پارامترهای ارزیابی</h1>
+    <p class="help-text">
+      <strong>راهنما:</strong> پارامترهایی که می‌خواهید در ارزیابی لحاظ شوند را انتخاب کنید. برای هر پارامتر می‌توانید وزن تعیین کنید و مشخص کنید که آیا عددی است یا توصیفی. برای پارامترهای توصیفی، می‌توانید معیارهای مختلف به همراه نمره آن‌ها را تعریف کنید.
+    </p>
     <form method="POST">
       <input type="hidden" name="action" value="configure">
       <input type="hidden" name="file_content" value="{{ file_content | safe }}">
@@ -156,9 +331,48 @@
           <!-- For each column, add a hidden criteria container -->
           <tr id="criteria_container_{{ col }}" class="criteria-container">
             <td colspan="4">
-              <strong>تعریف معیارهای نمره‌دهی برای "{{ col }}"</strong>
-              <div id="criteria_list_{{ col }}"></div>
-              <button type="button" class="add-btn" onclick="addCriterion('{{ col }}')">افزودن معیار</button>
+              <div style="text-align: right; padding: 0.5rem;">
+                <strong>تعریف معیارهای نمره‌دهی برای "{{ col }}"</strong>
+                <p class="help-text">لطفاً معیارهای ممکن را برای این پارامتر به همراه نمره‌شان تعریف کنید.</p>
+                
+                {% if criteria_by_param and col in criteria_by_param %}
+                <div class="existing-criteria">
+                  <strong>معیارهای موجود:</strong>
+                  <table class="criteria-table">
+                    <thead>
+                      <tr>
+                        <th>معیار</th>
+                        <th>نمره</th>
+                        <th>عملیات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for crit in criteria_by_param[col] %}
+                      <tr class="existing-criterion">
+                        <td>
+                          <input type="text" name="existing_criteria_{{ col }}[]" value="{{ crit.criterion }}" 
+                                readonly class="existing-criterion-text">
+                        </td>
+                        <td>
+                          <input type="number" name="existing_score_{{ col }}[]" value="{{ crit.score }}" 
+                                readonly class="existing-criterion-score">
+                        </td>
+                        <td class="criterion-actions">
+                          <button type="button" class="btn-edit" onclick="editCriterion(this)">ویرایش</button>
+                          <button type="button" class="btn-delete" onclick="deleteCriterion(this)">حذف</button>
+                          <button type="button" class="btn-save" onclick="saveCriterion(this)" style="display:none;">ذخیره</button>
+                          <button type="button" class="btn-cancel" onclick="cancelEdit(this)" style="display:none;">لغو</button>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% endif %}
+                
+                <div id="criteria_list_{{ col }}"></div>
+                <button type="button" class="add-btn" onclick="addCriterion('{{ col }}')">افزودن معیار</button>
+              </div>
             </td>
           </tr>
           {% endfor %}

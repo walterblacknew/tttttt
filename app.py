@@ -5,16 +5,17 @@ from extentions import db, login_manager
 from models import (
     User, Route, RoutePoint, RouteAssignment,
     Store, EvaluationParameter, StoreEvaluation, StoreEvaluationDetail, QuotaCategory,
-    CustomerReport, RouteReport, GradeMapping, CustomerEvaluation, DescriptiveCriterion
+    CustomerReport, RouteReport, GradeMapping, CustomerEvaluation, DescriptiveCriterion,
+    CSVEvaluationRecord, Province, ProvinceTarget
 )
 from forms import (
     LoginForm, UserForm, RouteForm, RoutePointForm,
     StoreForm, EvaluationParameterForm, StoreEvaluationForm, QuotaCategoryForm,
-    GradeMappingForm, CustomerEvaluationForm
+    GradeMappingForm, CustomerEvaluationForm, TargetSettingForm
 )
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_
-from datetime import datetime
+from sqlalchemy import or_, desc, text
+from datetime import datetime, timezone
 import csv
 import io
 import pandas as pd
@@ -55,7 +56,8 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        # Use Session.get() instead of Query.get()
+        return db.session.get(User, int(user_id))
 
     # --------------------- LOGIN / LOGOUT ---------------------
     @app.route('/login', methods=['GET', 'POST'])
@@ -153,7 +155,7 @@ def create_app():
                     number_of_customers=int(row.get('تعداد_مشتری')) if row.get('تعداد_مشتری') else None,
                     employee_intermediary=row.get('واسط_کارمند'),
                     sales_center=row.get('مرکز_فروش'),
-                    created_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc)
                 )
                 db.session.add(report)
             db.session.commit()
@@ -189,7 +191,7 @@ def create_app():
                     latitude=safe_float(row.get('Latitude')),
                     textbox4=row.get('Textbox4'),
                     textbox10=row.get('Textbox10'),
-                    created_at=datetime.utcnow()
+                    created_at=datetime.now(timezone.utc)
                 )
                 db.session.add(report)
             db.session.commit()
@@ -270,12 +272,165 @@ def create_app():
         if current_user.role != 'admin':
             flash('دسترسی غیرمجاز!', 'danger')
             return redirect(url_for('dashboard'))
-        gradeForm = GradeMappingForm()
-        customers = CustomerReport.query.order_by(CustomerReport.number).all()
-        grade_mappings = GradeMapping.query.order_by(GradeMapping.min_score.desc()).all()
-        evaluations = CustomerEvaluation.query.order_by(CustomerEvaluation.evaluated_at.desc()).all()
         
-        if request.method == 'POST':
+        # Form for grade mapping
+        gradeForm = GradeMappingForm()
+        
+        # Form for target setting
+        targetForm = TargetSettingForm()
+        
+        # Get customer list
+        customers = CustomerReport.query.order_by(CustomerReport.number).all()
+        
+        # Get grade mappings
+        grade_mappings = GradeMapping.query.order_by(GradeMapping.min_score.desc()).all()
+        
+        # Get individual evaluations (manual evaluations, limited to 100)
+        evaluations = CustomerEvaluation.query.filter(
+            CustomerEvaluation.evaluation_method == 'manual'
+        ).order_by(CustomerEvaluation.evaluated_at.desc()).limit(100).all()
+        
+        # SIMPLIFIED APPROACH: Get all distinct batch IDs from CSVEvaluationRecord
+        batch_ids_query = text("SELECT DISTINCT batch_id FROM csv_evaluation_record WHERE batch_id IS NOT NULL")
+        result = db.session.execute(batch_ids_query)
+        batch_ids = [row[0] for row in result if row[0]]
+        
+        print(f"Found {len(batch_ids)} distinct batch IDs in CSVEvaluationRecord")
+        
+        # If no batches found in CSVEvaluationRecord, try looking in CustomerEvaluation as fallback
+        if not batch_ids:
+            batch_ids_query = text("SELECT DISTINCT batch_id FROM customer_evaluation WHERE batch_id IS NOT NULL")
+            result = db.session.execute(batch_ids_query)
+            batch_ids = [row[0] for row in result if row[0]]
+            print(f"Fallback: Found {len(batch_ids)} distinct batch IDs in CustomerEvaluation")
+        
+        # Process each batch
+        batch_evaluations = []
+        batch_statistics = {}
+        
+        for batch_id in batch_ids:
+            # Get count of evaluations in batch from CSVEvaluationRecord
+            count_query = text("SELECT COUNT(*) FROM csv_evaluation_record WHERE batch_id = :batch_id")
+            count = db.session.execute(count_query, {"batch_id": batch_id}).scalar() or 0
+            
+            # If count is 0, try CustomerEvaluation as fallback
+            if count == 0:
+                count_query = text("SELECT COUNT(*) FROM customer_evaluation WHERE batch_id = :batch_id")
+                count = db.session.execute(count_query, {"batch_id": batch_id}).scalar() or 0
+            
+            # Get latest evaluation date
+            date_query = text("SELECT MAX(evaluated_at) FROM csv_evaluation_record WHERE batch_id = :batch_id")
+            latest_date = db.session.execute(date_query, {"batch_id": batch_id}).scalar()
+            
+            # If no date found, try CustomerEvaluation as fallback
+            if not latest_date:
+                date_query = text("SELECT MAX(evaluated_at) FROM customer_evaluation WHERE batch_id = :batch_id")
+                latest_date = db.session.execute(date_query, {"batch_id": batch_id}).scalar()
+            
+            # Create batch info object
+            if count > 0 and latest_date:
+                batch_info = {
+                    'batch_id': batch_id,
+                    'count': count,
+                    'evaluated_at': latest_date if isinstance(latest_date, datetime) else str(latest_date)
+                }
+                batch_evaluations.append(batch_info)
+                
+                # Get grade distribution
+                grade_query = text("""
+                    SELECT assigned_grade, COUNT(*) as count 
+                    FROM csv_evaluation_record 
+                    WHERE batch_id = :batch_id 
+                    GROUP BY assigned_grade
+                """)
+                grade_dist = db.session.execute(grade_query, {"batch_id": batch_id}).fetchall()
+                grade_counts = {grade[0]: grade[1] for grade in grade_dist}
+                
+                # If no grades found, try CustomerEvaluation as fallback
+                if not grade_counts:
+                    grade_query = text("""
+                        SELECT assigned_grade, COUNT(*) as count 
+                        FROM customer_evaluation 
+                        WHERE batch_id = :batch_id 
+                        GROUP BY assigned_grade
+                    """)
+                    grade_dist = db.session.execute(grade_query, {"batch_id": batch_id}).fetchall()
+                    grade_counts = {grade[0]: grade[1] for grade in grade_dist}
+                
+                # Calculate average score
+                avg_query = text("SELECT AVG(total_score) FROM csv_evaluation_record WHERE batch_id = :batch_id")
+                avg_score = db.session.execute(avg_query, {"batch_id": batch_id}).scalar() or 0
+                
+                # If no average found, try CustomerEvaluation as fallback
+                if avg_score == 0:
+                    avg_query = text("SELECT AVG(total_score) FROM customer_evaluation WHERE batch_id = :batch_id")
+                    avg_score = db.session.execute(avg_query, {"batch_id": batch_id}).scalar() or 0
+                
+                # Store statistics
+                batch_statistics[batch_id] = {
+                    'grades': grade_counts,
+                    'avg_score': round(avg_score, 2),
+                    'count': count,
+                    'date': latest_date if isinstance(latest_date, datetime) else str(latest_date)
+                }
+        
+        # Sort batches by evaluation date (newest first)
+        batch_evaluations = sorted(batch_evaluations, key=lambda x: x.get('evaluated_at', datetime.min), reverse=True)
+        
+        # Get provinces and targets for the target setting section
+        provinces = Province.query.order_by(Province.name).all()
+        
+        # Get province targets if they exist
+        province_targets = {}
+        targets = ProvinceTarget.query.order_by(ProvinceTarget.id.desc()).limit(31).all()
+        
+        # Create a mapping of province ID to target
+        for target in targets:
+            if target.province_id not in province_targets:
+                province_targets[target.province_id] = target
+        
+        # Process POST request for target setting
+        if 'submit_target' in request.form:
+            liter_enabled = 'liter_enabled' in request.form
+            shrink_enabled = 'shrink_enabled' in request.form
+            
+            if not liter_enabled and not shrink_enabled:
+                flash('لطفاً حداقل یکی از ظرفیت‌ها را انتخاب کنید.', 'warning')
+                return redirect(url_for('admin_quotas'))
+            
+            liter_capacity = float(request.form.get('liter_capacity', 0)) if liter_enabled else 0
+            shrink_capacity = float(request.form.get('shrink_capacity', 0)) if shrink_enabled else 0
+            
+            # Calculate total population to compute percentages
+            total_population = sum(province.population for province in provinces)
+            
+            # Clear previous targets
+            ProvinceTarget.query.delete()
+            
+            # Create new targets for each province
+            for province in provinces:
+                percentage = province.population / total_population
+                
+                target = ProvinceTarget(
+                    province_id=province.id,
+                    liter_capacity=liter_capacity * percentage if liter_enabled else None,
+                    shrink_capacity=shrink_capacity * percentage if shrink_enabled else None,
+                    liter_percentage=percentage * 100 if liter_enabled else None,
+                    shrink_percentage=percentage * 100 if shrink_enabled else None
+                )
+                db.session.add(target)
+            
+            try:
+                db.session.commit()
+                flash('تارگت‌ها با موفقیت محاسبه و ذخیره شدند.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'خطا در ذخیره تارگت‌ها: {str(e)}', 'danger')
+            
+            return redirect(url_for('admin_quotas'))
+        
+        # Process POST request for new grade mapping
+        if request.method == 'POST' and 'grade_letter' in request.form:
             if gradeForm.validate_on_submit():
                 grade_letter = gradeForm.grade_letter.data.strip()
                 min_score = gradeForm.min_score.data
@@ -296,10 +451,103 @@ def create_app():
                 return redirect(url_for('admin_quotas'))
         
         return render_template('admin/quotas.html',
-                               form=gradeForm,
-                               customers=customers,
-                               grade_mappings=grade_mappings,
-                               evaluations=evaluations)
+                            form=gradeForm,
+                            target_form=targetForm,
+                            customers=customers,
+                            grade_mappings=grade_mappings,
+                            evaluations=evaluations,
+                            batch_evaluations=batch_evaluations,
+                            batch_statistics=batch_statistics,
+                            provinces=provinces,
+                            province_targets=province_targets)
+
+    # --------------------- ADMIN: PROVINCE TARGETS MANAGEMENT ---------------------
+    @app.route('/admin/init_provinces')
+    @login_required
+    def init_provinces():
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # Check if provinces already exist
+        if Province.query.count() > 0:
+            flash('استان‌ها قبلاً اضافه شده‌اند.', 'info')
+            return redirect(url_for('admin_quotas'))
+        
+        # Province data (name, population)
+        provinces_data = [
+            ("تهران", 13267637),
+            ("خراسان رضوی", 6434501),
+            ("اصفهان", 5120850),
+            ("فارس", 4851274),
+            ("خوزستان", 4710509),
+            ("آذربایجان شرقی", 3909652),
+            ("مازندران", 3283582),
+            ("آذربایجان غربی", 3265219),
+            ("کرمان", 3164718),
+            ("سیستان و بلوچستان", 2775014),
+            ("البرز", 2712400),
+            ("گیلان", 2530696),
+            ("کرمانشاه", 1952434),
+            ("لرستان", 1760649),
+            ("همدان", 1738234),
+            ("گلستان", 1777014),
+            ("کردستان", 1603011),
+            ("هرمزگان", 1578183),
+            ("مرکزی", 1429475),
+            ("اردبیل", 1270420),
+            ("قزوین", 1201565),
+            ("قم", 1151672),
+            ("یزد", 1074428),
+            ("زنجان", 1015734),
+            ("بوشهر", 1032949),
+            ("چهارمحال و بختیاری", 895263),
+            ("خراسان شمالی", 867727),
+            ("کهگیلویه و بویراحمد", 658629),
+            ("خراسان جنوبی", 622534),
+            ("سمنان", 631218),
+            ("ایلام", 557599)
+        ]
+        
+        for name, population in provinces_data:
+            province = Province(name=name, population=population)
+            db.session.add(province)
+        
+        try:
+            db.session.commit()
+            flash('استان‌ها با موفقیت اضافه شدند.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'خطا در اضافه کردن استان‌ها: {str(e)}', 'danger')
+        
+        return redirect(url_for('admin_quotas'))
+
+    @app.route('/admin/province_targets')
+    @login_required
+    def admin_province_targets():
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # Get provinces and targets
+        provinces = Province.query.order_by(Province.name).all()
+        
+        # Get the latest target for each province
+        province_targets = {}
+        for province in provinces:
+            target = ProvinceTarget.query.filter_by(province_id=province.id).order_by(ProvinceTarget.id.desc()).first()
+            if target:
+                province_targets[province.id] = target
+        
+        # Check what capacities were set (for table headers)
+        has_liter = any(t.liter_capacity is not None for t in province_targets.values()) if province_targets else False
+        has_shrink = any(t.shrink_capacity is not None for t in province_targets.values()) if province_targets else False
+        
+        return render_template('admin/province_targets.html', 
+                            provinces=provinces,
+                            province_targets=province_targets,
+                            has_liter=has_liter,
+                            has_shrink=has_shrink)
 
     # --------------------- ADMIN: EVALUATE CUSTOMER (Single Evaluation) ---------------------
     @app.route('/admin/evaluate_customer/<int:customer_id>', methods=['GET', 'POST'], endpoint='evaluate_customer')
@@ -342,8 +590,13 @@ def create_app():
                     customer_id=customer.id,
                     total_score=total_score,
                     assigned_grade=assigned_grade,
-                    evaluated_at=datetime.utcnow()
+                    evaluated_at=datetime.now(timezone.utc),
+                    evaluation_method="manual"
                 )
+                
+                # Update customer's grade
+                customer.grade = assigned_grade
+                
                 db.session.add(evaluation)
                 db.session.commit()
                 return redirect(url_for('admin_quotas'))
@@ -439,7 +692,7 @@ def create_app():
             else:
                 new_user = User(
                     username=form.username.data,
-                                        password=generate_password_hash(form.password.data),
+                    password=generate_password_hash(form.password.data),
                     email=email_value,
                     fullname=form.fullname.data,
                     is_active=form.is_active.data,
@@ -613,48 +866,50 @@ def create_app():
     @app.route('/admin/descriptive_criteria/edit/<int:crit_id>', methods=['GET', 'POST'])
     @login_required
     def edit_descriptive_criteria(crit_id):
-        if current_user.role != 'admin':
-            flash('دسترسی غیرمجاز!', 'danger')
-            return redirect(url_for('dashboard'))
-        crit = DescriptiveCriterion.query.get_or_404(crit_id)
-        if request.method == 'POST':
-            crit.parameter_name = request.form.get('parameter')
-            crit.criterion = request.form.get('criterion')
-            try:
-                crit.score = float(request.form.get('score'))
-            except:
-                flash('نمره باید عددی باشد.', 'danger')
-                return redirect(url_for('edit_descriptive_criteria', crit_id=crit_id))
-            try:
-                db.session.commit()
-                flash('معیار ویرایش شد.', 'success')
-                return redirect(url_for('descriptive_criteria'))
-            except IntegrityError:
-                db.session.rollback()
-                flash('خطا در ویرایش معیار.', 'danger')
-        return render_template('admin/edit_descriptive_criteria.html', crit=crit)
+       if current_user.role != 'admin':
+           flash('دسترسی غیرمجاز!', 'danger')
+           return redirect(url_for('dashboard'))
+       crit = DescriptiveCriterion.query.get_or_404(crit_id)
+       if request.method == 'POST':
+           crit.parameter_name = request.form.get('parameter')
+           crit.criterion = request.form.get('criterion')
+           try:
+               crit.score = float(request.form.get('score'))
+           except:
+               flash('نمره باید عددی باشد.', 'danger')
+               return redirect(url_for('edit_descriptive_criteria', crit_id=crit_id))
+           try:
+               db.session.commit()
+               flash('معیار ویرایش شد.', 'success')
+               return redirect(url_for('descriptive_criteria'))
+           except IntegrityError:
+               db.session.rollback()
+               flash('خطا در ویرایش معیار.', 'danger')
+       return render_template('admin/edit_descriptive_criteria.html', crit=crit)
 
     @app.route('/admin/descriptive_criteria/delete/<int:crit_id>', methods=['POST'])
     @login_required
     def delete_descriptive_criteria(crit_id):
-        if current_user.role != 'admin':
-            flash('دسترسی غیرمجاز!', 'danger')
-            return redirect(url_for('dashboard'))
-        crit = DescriptiveCriterion.query.get_or_404(crit_id)
-        db.session.delete(crit)
-        db.session.commit()
-        flash('معیار حذف شد.', 'info')
-        return redirect(url_for('descriptive_criteria'))
+       if current_user.role != 'admin':
+           flash('دسترسی غیرمجاز!', 'danger')
+           return redirect(url_for('dashboard'))
+       crit = DescriptiveCriterion.query.get_or_404(crit_id)
+       db.session.delete(crit)
+       db.session.commit()
+       flash('معیار حذف شد.', 'info')
+       return redirect(url_for('descriptive_criteria'))
 
-    # --------------------- ADMIN: EVALUATE WITH CSV/EXCEL ---------------------
+    # --------------------- ADMIN: EVALUATE WITH CSV/EXCEL (Enhanced) ---------------------
     @app.route('/admin/evaluate_csv', methods=['GET', 'POST'])
     @login_required
     def admin_evaluate_csv():
         if current_user.role != 'admin':
             flash('دسترسی غیرمجاز!', 'danger')
             return redirect(url_for('dashboard'))
+            
         if request.method == 'GET':
             return render_template('admin/evaluate_csv_upload.html')
+            
         else:
             action = request.form.get('action')
             if action == 'upload_file':
@@ -662,6 +917,7 @@ def create_app():
                 if not file:
                     flash('هیچ فایلی انتخاب نشده است.', 'danger')
                     return redirect(url_for('admin_evaluate_csv'))
+                    
                 filename = file.filename.lower()
                 try:
                     if filename.endswith('.csv'):
@@ -674,16 +930,40 @@ def create_app():
                 except Exception as e:
                     flash(f'خطا در خواندن فایل: {e}', 'danger')
                     return redirect(url_for('admin_evaluate_csv'))
+                    
                 columns = list(df.columns)
                 file_content = df.to_csv(index=False)
-                return render_template('admin/evaluate_csv_configure.html', columns=columns, file_content=file_content)
+                
+                # Get all defined descriptive criteria for dropdown options
+                descriptive_criteria = DescriptiveCriterion.query.all()
+                criteria_by_param = {}
+                for crit in descriptive_criteria:
+                    if crit.parameter_name not in criteria_by_param:
+                        criteria_by_param[crit.parameter_name] = []
+                    criteria_by_param[crit.parameter_name].append({
+                        'criterion': crit.criterion,
+                        'score': crit.score
+                    })
+
+                # Get all grade mappings for debugging/display
+                grade_mappings = GradeMapping.query.order_by(GradeMapping.min_score.desc()).all()
+                    
+                return render_template('admin/evaluate_csv_configure.html', 
+                                      columns=columns, 
+                                      file_content=file_content,
+                                      criteria_by_param=criteria_by_param,
+                                      grade_mappings=grade_mappings)
+                                      
             elif action == 'configure':
                 file_content = request.form.get('file_content')
                 if not file_content:
                     flash('مشکل در بازیابی فایل آپلود شده.', 'danger')
                     return redirect(url_for('admin_evaluate_csv'))
+                    
                 config = {}
-                # Build configuration for each column from checkboxes, weights, and types.
+                criteria_config = {}
+                
+                # Build configuration for each column from checkboxes, weights, and types
                 for key in request.form:
                     if key.startswith('use_'):
                         col = key[4:]
@@ -694,19 +974,66 @@ def create_app():
                                 weight = 1
                             var_type = request.form.get(f'type_{col}', 'numeric')
                             config[col] = {'weight': weight, 'type': var_type}
+                            
+                            # For descriptive parameters, collect the criteria data
+                            if var_type == 'descriptive':
+                                criteria_config[col] = []
+                                
+                                # Get new criteria added in the form
+                                criteria_values = request.form.getlist(f'criteria_{col}[]')
+                                criteria_scores = request.form.getlist(f'score_{col}[]')
+                                
+                                for i in range(len(criteria_values)):
+                                    if i < len(criteria_scores):
+                                        try:
+                                            score = float(criteria_scores[i])
+                                            criteria_config[col].append({
+                                                'criterion': criteria_values[i],
+                                                'score': score
+                                            })
+                                        except (ValueError, IndexError):
+                                            continue
+                                            
+                                # Get existing criteria (that may have been edited)
+                                existing_criteria = request.form.getlist(f'existing_criteria_{col}[]')
+                                existing_scores = request.form.getlist(f'existing_score_{col}[]')
+                                
+                                for i in range(len(existing_criteria)):
+                                    if i < len(existing_scores):
+                                        try:
+                                            score = float(existing_scores[i])
+                                            criteria_config[col].append({
+                                                'criterion': existing_criteria[i],
+                                                'score': score
+                                            })
+                                        except (ValueError, IndexError):
+                                            continue
+                                    
                 if not config:
                     flash('هیچ ستونی انتخاب نشده است.', 'danger')
                     return redirect(url_for('admin_evaluate_csv'))
+                    
                 try:
                     df = pd.read_csv(io.StringIO(file_content))
                 except Exception as e:
                     flash(f'خطا در بازیابی فایل: {e}', 'danger')
                     return redirect(url_for('admin_evaluate_csv'))
+                    
                 valid_rows = []
                 missing_rows = []
                 total_scores = []
                 grades = []
+                
+                # Get all grade mappings for scoring
+                all_grade_mappings = GradeMapping.query.order_by(GradeMapping.min_score.desc()).all()
+                
+                # Create a batch identifier for this evaluation session
+                evaluation_batch_id = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
+                print(f"Created batch ID: {evaluation_batch_id}")
+                
                 # Process each row
+                successful_evaluations = 0
+                
                 for index, row in df.iterrows():
                     missing = False
                     # Check for missing numeric values for selected numeric parameters
@@ -714,65 +1041,457 @@ def create_app():
                         if params['type'] == 'numeric' and pd.isnull(row.get(col)):
                             missing = True
                             break
+                            
                     if missing:
                         missing_rows.append(row.to_dict())
                         continue
+                        
                     score = 0
+                    parameter_scores = {}
+                    
                     for col, params in config.items():
                         val = row.get(col, 0)
                         if pd.isnull(val):
                             val = 0
+                            
+                        # Handle different parameter types
                         if params['type'] == 'numeric':
                             try:
                                 numeric_val = float(val)
                             except:
                                 numeric_val = 0
-                            score += params['weight'] * numeric_val
+                            param_score = params['weight'] * numeric_val
+                            
                         else:
-                            # For descriptive parameters, look up the corresponding criterion.
-                            # Here we assume that the cell value exactly matches one of the defined criteria (case-insensitive)
-                            crit = DescriptiveCriterion.query.filter(
-                                DescriptiveCriterion.parameter_name.ilike(col),
-                                DescriptiveCriterion.criterion.ilike(str(val).strip())
-                            ).first()
-                            if crit:
-                                numeric_val = crit.score
-                            else:
-                                numeric_val = 0
-                            score += params['weight'] * numeric_val
+                            # For descriptive parameters, look up the corresponding criterion
+                            val_str = str(val).strip()
+                            param_score = 0
+                            
+                            # First check if we have specific criteria defined in the form
+                            if col in criteria_config:
+                                found_match = False
+                                for criterion_data in criteria_config[col]:
+                                    if criterion_data['criterion'].lower() == val_str.lower():
+                                        # Multiply by weight here
+                                        param_score = params['weight'] * criterion_data['score']
+                                        found_match = True
+                                        break
+                                
+                                # If no match was found in the form criteria, check database
+                                if not found_match:
+                                    # Otherwise use existing criteria from database
+                                    crit = DescriptiveCriterion.query.filter(
+                                        DescriptiveCriterion.parameter_name.ilike(col),
+                                        DescriptiveCriterion.criterion.ilike(val_str)
+                                    ).first()
+                                    if crit:
+                                        param_score = params['weight'] * crit.score
+                                    
+                        # Add to total score and track individual parameter score
+                        score += param_score
+                        parameter_scores[col] = param_score
+                    
+                    # Round score to 2 decimal places for consistency
+                    score = round(score, 2)
                     total_scores.append(score)
-                    grade_obj = GradeMapping.query.filter(GradeMapping.min_score <= score)\
-                                    .order_by(GradeMapping.min_score.desc()).first()
-                    if grade_obj:
-                        assigned_grade = grade_obj.grade_letter
+                    
+                    # Find the appropriate grade based on the score
+                    mapping_obj = GradeMapping.query.filter(GradeMapping.min_score <= score)\
+                                .order_by(GradeMapping.min_score.desc()).first()
+                                
+                    if mapping_obj:
+                        assigned_grade = mapping_obj.grade_letter
                     else:
                         assigned_grade = "بدون درجه"
+                        
                     grades.append(assigned_grade)
+                    
                     row_dict = row.to_dict()
                     row_dict["نمره کل"] = f"{score:.2f}"
                     row_dict["درجه"] = assigned_grade
+                    row_dict["batch_id"] = evaluation_batch_id
+                    
+                    # Add parameter scores to row data
+                    for param, param_score in parameter_scores.items():
+                        row_dict[f"نمره {param}"] = f"{param_score:.2f}"
+                        
                     valid_rows.append(row_dict)
-                    # Update customer record if "Number" column exists
-                    cust_number = row.get("Number")
-                    if cust_number:
-                        customer = CustomerReport.query.filter_by(number=str(cust_number)).first()
-                        if customer:
-                            customer.grade = assigned_grade
-                            db.session.commit()
-                # (Optionally, you can pass the list of descriptive parameters as well)
+                    
+                    # Always create a CSV evaluation record regardless of customer match
+                    try:
+                        # Create a new CSVEvaluationRecord
+                        csv_record = CSVEvaluationRecord(
+                            row_data=row_dict,
+                            total_score=score,
+                            assigned_grade=assigned_grade,
+                            evaluated_at=datetime.now(timezone.utc),
+                            batch_id=evaluation_batch_id
+                        )
+                        
+                        # Associate with customer if found
+                        cust_number = row.get("Number")
+                        if cust_number:
+                            customer = CustomerReport.query.filter_by(number=str(cust_number)).first()
+                            if customer:
+                                print(f"Found customer with ID: {customer.id} for number: {cust_number}")
+                                
+                                # Link to customer and update customer's grade
+                                csv_record.customer_id = customer.id
+                                customer.grade = assigned_grade
+                                
+                                # Also create a CustomerEvaluation record for backward compatibility
+                                try:
+                                    new_evaluation = CustomerEvaluation(
+                                        customer_id=customer.id,
+                                        total_score=score,
+                                        assigned_grade=assigned_grade,
+                                        evaluated_at=datetime.now(timezone.utc),
+                                        evaluation_method="csv",
+                                        batch_id=evaluation_batch_id
+                                    )
+                                    db.session.add(new_evaluation)
+                                except Exception as e:
+                                    print(f"Error creating CustomerEvaluation for {cust_number}: {e}")
+                        
+                        # Add and commit the CSV record
+                        db.session.add(csv_record)
+                        db.session.commit()
+                        successful_evaluations += 1
+                        print(f"Saved evaluation record for row {index} with grade {assigned_grade}")
+                    except Exception as e:
+                        db.session.rollback()
+                        print(f"Error saving evaluation record for row {index}: {e}")
+                        
+                # Get list of descriptive parameters for the template
                 descriptive_params = [col for col, params in config.items() if params['type'] == 'descriptive']
+                
+                # Save the criteria to database if they don't exist yet
+                try:
+                    for col, criteria_list in criteria_config.items():
+                        for criteria_data in criteria_list:
+                            existing = DescriptiveCriterion.query.filter_by(
+                                parameter_name=col,
+                                criterion=criteria_data['criterion']
+                            ).first()
+                            
+                            if not existing:
+                                new_criterion = DescriptiveCriterion(
+                                    parameter_name=col,
+                                    criterion=criteria_data['criterion'],
+                                    score=criteria_data['score']
+                                )
+                                db.session.add(new_criterion)
+                            elif existing.score != criteria_data['score']:
+                                # Update score if it's different
+                                existing.score = criteria_data['score']
+                    
+                    db.session.commit()
+                    print("Successfully saved all criteria")
+                    flash(f'ارزیابی با موفقیت انجام شد. {successful_evaluations} مشتری ارزیابی شدند.', 'success')
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Error saving criteria: {e}")
+                    flash(f'خطا در ذخیره‌سازی معیارها: {e}', 'danger')
+                    
                 return render_template('admin/evaluate_csv.html',
-                                       valid_rows=valid_rows,
-                                       missing_rows=missing_rows,
-                                       descriptive_params=descriptive_params)
+                                      valid_rows=valid_rows,
+                                      missing_rows=missing_rows,
+                                      descriptive_params=descriptive_params,
+                                      config=config,
+                                      grades=grades,
+                                      grade_mappings=all_grade_mappings,
+                                      batch_id=evaluation_batch_id)
             else:
                 flash('عملیات نامشخص.', 'danger')
                 return redirect(url_for('admin_evaluate_csv'))
 
+    # --------------------- NEW ROUTES FOR BATCH EVALUATION MANAGEMENT ---------------------
+    @app.route('/admin/batch_evaluations/<batch_id>')
+    @login_required
+    def view_batch_evaluations(batch_id):
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # First try CSVEvaluationRecord
+        csv_evals = CSVEvaluationRecord.query.filter_by(batch_id=batch_id).order_by(
+            CSVEvaluationRecord.total_score.desc()
+        ).all()
+        
+        # If no CSV records found, fallback to CustomerEvaluation
+        if not csv_evals:
+            customer_evals = CustomerEvaluation.query.filter_by(batch_id=batch_id).order_by(
+                desc(CustomerEvaluation.total_score)
+            ).all()
+            
+            if not customer_evals:
+                flash('دسته ارزیابی یافت نشد.', 'warning')
+                return redirect(url_for('admin_quotas'))
+            
+            # Get statistics for customer_evals
+            grade_dist = db.session.query(
+                CustomerEvaluation.assigned_grade,
+                db.func.count(CustomerEvaluation.id).label('count')
+            ).filter(CustomerEvaluation.batch_id == batch_id).\
+            group_by(CustomerEvaluation.assigned_grade).all()
+            
+            # Format as dictionary for easy access in template
+            grade_counts = {grade.assigned_grade: grade.count for grade in grade_dist}
+            
+            # Calculate average score
+            avg_score = db.session.query(
+                db.func.avg(CustomerEvaluation.total_score)
+            ).filter(CustomerEvaluation.batch_id == batch_id).scalar() or 0
+            
+            return render_template('admin/batch_evaluations.html', 
+                                batch_id=batch_id,
+                                evaluations=customer_evals,
+                                grade_counts=grade_counts,
+                                avg_score=round(avg_score, 2),
+                                date=customer_evals[0].evaluated_at if customer_evals else None,
+                                is_csv_record=False)
+        else:
+            # Get grade distribution for CSVEvaluationRecord
+            grade_query = text("""
+                SELECT assigned_grade, COUNT(*) as count 
+                FROM csv_evaluation_record 
+                WHERE batch_id = :batch_id 
+                GROUP BY assigned_grade
+            """)
+            grade_dist = db.session.execute(grade_query, {"batch_id": batch_id}).fetchall()
+            grade_counts = {grade[0]: grade[1] for grade in grade_dist}
+            
+            # Calculate average score
+            avg_query = text("SELECT AVG(total_score) FROM csv_evaluation_record WHERE batch_id = :batch_id")
+            avg_score = db.session.execute(avg_query, {"batch_id": batch_id}).scalar() or 0
+            
+            return render_template('admin/batch_evaluations.html', 
+                                batch_id=batch_id,
+                                evaluations=csv_evals,
+                                grade_counts=grade_counts,
+                                avg_score=round(avg_score, 2),
+                                date=csv_evals[0].evaluated_at if csv_evals else None,
+                                is_csv_record=True)
+
+    @app.route('/admin/batch_evaluations/delete/<batch_id>', methods=['POST'])
+    @login_required
+    def delete_batch_evaluations(batch_id):
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+            
+        try:
+            # Delete from CSVEvaluationRecord
+            csv_evals = CSVEvaluationRecord.query.filter_by(batch_id=batch_id).all()
+            for eval in csv_evals:
+                db.session.delete(eval)
+            
+            # Also delete from CustomerEvaluation for compatibility
+            customer_evals = CustomerEvaluation.query.filter_by(batch_id=batch_id).all()
+            for eval in customer_evals:
+                db.session.delete(eval)
+                
+            db.session.commit()
+            flash(f'دسته ارزیابی با موفقیت حذف شد.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'خطا در حذف دسته ارزیابی: {e}', 'danger')
+            
+        return redirect(url_for('admin_quotas'))
+        
+    @app.route('/admin/evaluations/delete/<int:eval_id>', methods=['POST'])
+    @login_required
+    def delete_evaluation(eval_id):
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+            
+        try:
+            # First try CSVEvaluationRecord
+            evaluation = CSVEvaluationRecord.query.get(eval_id)
+            
+            # If not found, try CustomerEvaluation
+            if not evaluation:
+                evaluation = CustomerEvaluation.query.get_or_404(eval_id)
+            
+            # Save batch_id for redirect
+            batch_id = evaluation.batch_id
+            
+            db.session.delete(evaluation)
+            db.session.commit()
+            flash('ارزیابی با موفقیت حذف شد.', 'success')
+            
+            # Redirect based on where the delete was initiated
+            if batch_id:
+                return redirect(url_for('view_batch_evaluations', batch_id=batch_id))
+            else:
+                return redirect(url_for('admin_quotas'))
+                
+        except Exception as e:
+            db.session.rollback()
+            flash(f'خطا در حذف ارزیابی: {e}', 'danger')
+            
+        return redirect(url_for('admin_quotas'))
+
+    # Edit individual evaluation
+    @app.route('/admin/evaluations/edit/<int:eval_id>', methods=['GET', 'POST'])
+    @login_required
+    def edit_evaluation(eval_id):
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # First try to find in CSVEvaluationRecord
+        evaluation = CSVEvaluationRecord.query.get(eval_id)
+        is_csv_record = True
+        
+        # If not found, try CustomerEvaluation
+        if not evaluation:
+            evaluation = CustomerEvaluation.query.get_or_404(eval_id)
+            is_csv_record = False
+        
+        if request.method == 'POST':
+            try:
+                new_score = float(request.form.get('total_score'))
+                
+                # Get appropriate grade based on the score
+                mapping_obj = GradeMapping.query.filter(GradeMapping.min_score <= new_score)\
+                            .order_by(GradeMapping.min_score.desc()).first()
+                
+                if mapping_obj:
+                    new_grade = mapping_obj.grade_letter
+                else:
+                    new_grade = "بدون درجه"
+                
+                # Update evaluation record
+                evaluation.total_score = new_score
+                evaluation.assigned_grade = new_grade
+                
+                # If it's a CSVEvaluationRecord, also update the row_data
+                if is_csv_record and evaluation.row_data:
+                    evaluation.row_data["نمره کل"] = f"{new_score:.2f}"
+                    evaluation.row_data["درجه"] = new_grade
+                
+                # If associated with a customer, update customer's grade
+                if hasattr(evaluation, 'customer_id') and evaluation.customer_id:
+                    customer = None
+                    if is_csv_record:
+                        customer = CustomerReport.query.get(evaluation.customer_id)
+                    else:
+                        customer = evaluation.customer
+                    
+                    if customer:
+                        customer.grade = new_grade
+                
+                db.session.commit()
+                flash('ارزیابی با موفقیت ویرایش شد.', 'success')
+                
+                # Redirect based on where the edit was initiated (batch view or main quotas page)
+                if evaluation.batch_id:
+                    return redirect(url_for('view_batch_evaluations', batch_id=evaluation.batch_id))
+                else:
+                    return redirect(url_for('admin_quotas'))
+            
+            except ValueError:
+                flash('نمره باید عددی باشد.', 'danger')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'خطا در ویرایش ارزیابی: {e}', 'danger')
+        
+        # Modify the template to handle both types
+        return render_template('admin/edit_evaluation.html', 
+                            evaluation=evaluation, 
+                            grade_mappings=GradeMapping.query.order_by(GradeMapping.min_score.desc()).all(),
+                            is_csv_record=is_csv_record)
+
+    # --------------------- ADMIN: QUOTA CATEGORIES MANAGEMENT ---------------------
+    @app.route('/admin/quota_categories', methods=['GET', 'POST'])
+    @login_required
+    def admin_quota_categories():
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+        form = QuotaCategoryForm()
+        quota_list = QuotaCategory.query.all()
+        
+        if form.validate_on_submit():
+            category = form.category.data.strip()
+            monthly_quota = form.monthly_quota.data
+            
+            new_category = QuotaCategory(
+                category=category,
+                monthly_quota=monthly_quota
+            )
+            
+            try:
+                db.session.add(new_category)
+                db.session.commit()
+                flash(f'سهمیه برای دسته {category} با موفقیت تعریف شد.', 'success')
+                return redirect(url_for('admin_quota_categories'))
+            except IntegrityError:
+                db.session.rollback()
+                flash('خطا در ذخیره سهمیه. احتمالاً این دسته قبلاً تعریف شده است.', 'danger')
+        
+        return render_template('admin/quota_categories.html', form=form, quota_list=quota_list)
+
+    @app.route('/admin/quota_categories/delete/<int:qc_id>', methods=['POST'])
+    @login_required
+    def delete_quota_category(qc_id):
+        if current_user.role != 'admin':
+            flash('دسترسی غیرمجاز!', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        quota_category = QuotaCategory.query.get_or_404(qc_id)
+        db.session.delete(quota_category)
+        db.session.commit()
+        flash('سهمیه با موفقیت حذف شد.', 'info')
+        return redirect(url_for('admin_quota_categories'))
+
+    # --------------------- API ENDPOINTS ---------------------
+    @app.route('/api/observer/marketer-locations')
+    @login_required
+    def api_marketer_locations():
+        if current_user.role not in ['admin', 'observer']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        marketers = User.query.filter_by(role='marketer').all()
+        result = []
+        
+        for marketer in marketers:
+            location_data = {
+                'id': marketer.id,
+                'name': marketer.fullname or marketer.username,
+                'lat': marketer.current_lat,
+                'lng': marketer.current_lng,
+                'last_update': marketer.last_location_update.strftime('%Y-%m-%d %H:%M:%S') if marketer.last_location_update else None
+            }
+            result.append(location_data)
+        
+        return jsonify(result)
+
+    # Add API endpoint for marketer to update location
+    @app.route('/api/marketer/update-location', methods=['POST'])
+    @login_required
+    def api_update_location():
+        if current_user.role != 'marketer':
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.json
+        if not data or 'lat' not in data or 'lng' not in data:
+            return jsonify({'error': 'Invalid data'}), 400
+        
+        try:
+            current_user.current_lat = float(data['lat'])
+            current_user.current_lng = float(data['lng'])
+            current_user.last_location_update = datetime.now(timezone.utc)
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Location updated'})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+
     return app
 
 if __name__ == '__main__':
-    application = create_app()
-    application.run(debug=True, port=5000)
-
-                   
+   application = create_app()
+   application.run(debug=True, port=5000)

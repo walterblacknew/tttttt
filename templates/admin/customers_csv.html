@@ -1,4 +1,3 @@
-<!-- templates/admin/customers_csv.html -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -14,7 +13,7 @@
       font-family: 'Vazirmatn', sans-serif;
       color: #1e293b;
     }
-    h1 {
+    h1, h2 {
       margin-bottom: 1rem;
     }
     .btn {
@@ -26,10 +25,7 @@
       cursor: pointer;
       transition: background 0.2s;
       font-size: 0.875rem;
-      text-decoration: none; /* so links look like buttons */
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      text-decoration: none;
     }
     .btn:hover {
       background: #4338ca;
@@ -39,11 +35,6 @@
     }
     .btn-danger:hover {
       background: #dc2626 !important;
-    }
-    .top-actions {
-      margin-bottom: 1.5rem;
-      display: flex;
-      gap: 1rem;
     }
     .upload-form, .csv-wrapper {
       background: #fff;
@@ -58,8 +49,31 @@
       display: block;
       color: #64748b;
     }
-    input[type="file"] {
+    input[type="file"], select {
       margin-bottom: 0.5rem;
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+    }
+    .province-filter {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .preview-section {
+      margin-top: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
     }
     .search-box {
       display: flex;
@@ -81,8 +95,7 @@
     th, td {
       padding: 0.75rem;
       border-bottom: 1px solid #e2e8f0;
-      text-align: left;
-      vertical-align: middle;
+      text-align: right;
     }
     th {
       background-color: #f9fafb;
@@ -92,124 +105,157 @@
     tr:hover td {
       background-color: #f8fafc;
     }
-    .actions {
+    .batch-card {
+      background-color: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .batch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .batch-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .batch-info {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+    .batch-actions {
+      margin-top: 1rem;
       display: flex;
       gap: 0.5rem;
     }
-    form {
-      margin: 0;
+    .flash {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      background: #f0fdf4;
+      border-left: 4px solid #22c55e;
+    }
+    .flash.error {
+      background: #fef2f2;
+      border-left-color: #ef4444;
     }
   </style>
 </head>
 <body>
   <h1>مدیریت کامل اطلاعات مشتریان (CSV)</h1>
 
-  <!-- Top Actions: Upload & Map Buttons -->
-  <div class="top-actions">
-    <!-- Upload Form Container -->
-    <div class="upload-form">
-      <form action="{{ url_for('admin_upload_customer_csv') }}" method="POST" enctype="multipart/form-data">
+  <!-- Upload Form with Province Selection -->
+  <div class="upload-form">
+    <form action="{{ url_for('admin_upload_customer_csv') }}" method="POST" enctype="multipart/form-data">
+      <div style="margin-bottom: 1rem;">
         <label for="customer_csv">بارگذاری فایل CSV اطلاعات مشتریان:</label>
         <input type="file" id="customer_csv" name="customer_csv" accept=".csv" required>
-        <button type="submit" class="btn">بارگذاری</button>
-      </form>
-    </div>
-
-    <!-- Button to show customers map -->
-    <a class="btn" href="{{ url_for('admin_customers_csv_map') }}">
-      نقشه مشتریان
-    </a>
-  </div>
-
-  {% if customer_data %}
-  <div class="csv-wrapper">
-    <div class="search-box">
-      <input type="text" id="searchQuery" placeholder="جستجو در فایل CSV..." oninput="filterData()">
-      <button type="button" class="btn" onclick="filterData()">جستجو</button>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          {% for header in customer_data[0].keys() %}
-          <th>{{ header }}</th>
+      </div>
+      
+      <div style="margin-bottom: 1rem;">
+        <label for="province">استان:</label>
+        <select id="province" name="province" required>
+          <option value="">انتخاب استان</option>
+          {% for province in provinces %}
+            <option value="{{ province.name }}">{{ province.name }}</option>
           {% endfor %}
-          <th>عملیات</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+        </select>
+      </div>
+      
+      <button type="submit" class="btn">بارگذاری</button>
+    </form>
   </div>
-  {% else %}
-  <p>هیچ فایل CSV برای اطلاعات مشتریان بارگذاری نشده است.</p>
-  {% endif %}
+
+  <!-- Province Filter -->
+  <div class="province-filter">
+    <label for="provinceFilter">فیلتر بر اساس استان:</label>
+    <select id="provinceFilter" onchange="filterByProvince(this.value)">
+      <option value="">همه استان‌ها</option>
+      {% for province in provinces %}
+        <option value="{{ province.name }}">{{ province.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Batches by Province -->
+  <div id="provinceBatches">
+    {% for province_name, province_data in customer_data_by_province.items() %}
+      <div class="batch-card" data-province="{{ province_name }}">
+        <div class="batch-header">
+          <div class="batch-title">{{ province_name }}</div>
+          <div class="batch-info">
+            تعداد رکورد: {{ province_data|length }}
+          </div>
+        </div>
+        
+        <div class="search-box">
+          <input type="text" 
+                 placeholder="جستجو در داده‌های {{ province_name }}..." 
+                 onkeyup="filterProvinceData('{{ province_name }}', this.value)">
+        </div>
+        
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                {% for header in column_headers %}
+                <th>{{ header }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody id="tableBody{{ province_name|replace(' ', '') }}">
+              {% for row in province_data %}
+              <tr>
+                {% for header in column_headers %}
+                <td>{{ row[header] }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
 
   <script>
+    // Initialize Lucide icons
     lucide.createIcons();
 
-    const originalData = JSON.parse('{{ customer_data|tojson|safe }}' || '[]');
-    let data = [...originalData];
-
-    const tableBody = document.getElementById('tableBody');
-    const searchInput = document.getElementById('searchQuery');
-
-    function renderData(rows) {
-      tableBody.innerHTML = '';
-      rows.forEach((row, idx) => {
-        const tr = document.createElement('tr');
-
-        // columns
-        Object.values(row).forEach(val => {
-          const td = document.createElement('td');
-          td.textContent = val;
-          tr.appendChild(td);
-        });
-
-        // actions
-        const tdActions = document.createElement('td');
-        tdActions.className = 'actions';
-
-        // Edit
-        const editForm = document.createElement('form');
-        editForm.method = "GET";
-        editForm.action = `/admin/customers-csv/edit/${idx}`;
-
-        const editBtn = document.createElement('button');
-        editBtn.type = "submit";
-        editBtn.className = "btn";
-        editBtn.textContent = "ویرایش";
-        editForm.appendChild(editBtn);
-
-        // Delete
-        const deleteForm = document.createElement('form');
-        deleteForm.method = "POST";
-        deleteForm.action = `/admin/customers-csv/delete/${idx}`;
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = "submit";
-        deleteBtn.className = "btn btn-danger";
-        deleteBtn.textContent = "حذف";
-        deleteForm.appendChild(deleteBtn);
-
-        tdActions.appendChild(editForm);
-        tdActions.appendChild(deleteForm);
-        tr.appendChild(tdActions);
-
-        tableBody.appendChild(tr);
+    // Filter by province
+    function filterByProvince(province) {
+      const cards = document.querySelectorAll('.batch-card');
+      cards.forEach(card => {
+        if (!province || card.dataset.province === province) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
       });
     }
 
-    function filterData() {
-      const q = searchInput.value.trim().toLowerCase();
-      data = originalData.filter(row =>
-        Object.values(row).some(val => String(val).toLowerCase().includes(q))
-      );
-      renderData(data);
-    }
-
-    // Initial render
-    if (originalData.length > 0) {
-      renderData(originalData);
+    // Filter data within a province
+    function filterProvinceData(province, query) {
+      query = query.toLowerCase();
+      const tableBody = document.getElementById(`tableBody${province.replace(' ', '')}`);
+      const rows = tableBody.getElementsByTagName('tr');
+      
+      for (let row of rows) {
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+        
+        for (let cell of cells) {
+          if (cell.textContent.toLowerCase().includes(query)) {
+            found = true;
+            break;
+          }
+        }
+        
+        row.style.display = found ? '' : 'none';
+      }
     }
   </script>
 </body>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تارگت‌های استانی | پنل مدیریت</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Global Styles */
+    body {
+      background-color: #f1f5f9;
+      font-family: 'Vazirmatn', sans-serif;
+      padding: 2rem;
+      color: #1e293b;
+      direction: rtl;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.75rem;
+      color: #334155;
+    }
+    /* Section styling */
+    .section {
+      background: #fff;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    /* Map container */
+    #iran-map-container {
+      width: 100%;
+      height: 600px;
+      margin-bottom: 2rem;
+      position: relative;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    
+    /* Color legend for map */
+    .color-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      padding: 0.75rem;
+      background: #f8fafc;
+      border-radius: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 0 1rem;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      margin-left: 0.5rem;
+      border-radius: 3px;
+    }
+    
+    /* Table */
+    .target-results-table {
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 1.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: right;
+      font-size: 0.875rem;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    tr:hover td {
+      background-color: #f1f5f9;
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background-color: #4f46e5;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background-color: #4338ca;
+    }
+    .btn-outline {
+      background-color: transparent;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-outline:hover {
+      background-color: #f8fafc;
+    }
+    
+    /* Header actions */
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-actions">
+    <h1>تارگت‌های استانی</h1>
+    <div>
+      <a href="{{ url_for('admin_quotas') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-right"></i>
+        بازگشت به صفحه سهمیه‌ها
+      </a>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>
+      <i class="fas fa-map-marked-alt" style="color: #4f46e5;"></i>
+      نقشه تارگت استان‌ها
+    </h2>
+    
+    <!-- Color legend -->
+    <div class="color-legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #dbeafe;"></div>
+        <span>کمترین درصد</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #93c5fd;"></div>
+        <span>درصد متوسط</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #3b82f6;"></div>
+        <span>درصد بالا</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #1e40af;"></div>
+        <span>بیشترین درصد</span>
+      </div>
+    </div>
+    
+    <!-- Map container -->
+    <div id="iran-map-container">
+      <!-- SVG map will be rendered here via JavaScript -->
+    </div>
+    
+    <!-- Table of results -->
+    <h2>
+      <i class="fas fa-table" style="color: #4f46e5;"></i>
+      جدول تارگت استان‌ها
+    </h2>
+    
+    <div class="target-results-table">
+      <table>
+        <thead>
+          <tr>
+            <th>ردیف</th>
+            <th>استان</th>
+            <th>جمعیت</th>
+            <th>درصد از کل</th>
+            {% if has_liter %}
+              <th>ظرفیت لیتر</th>
+            {% endif %}
+            {% if has_shrink %}
+              <th>ظرفیت شرینک</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% set total_population = provinces|sum(attribute='population') %}
+          {% for province in provinces %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ province.name }}</td>
+            <td>{{ "{:,}".format(province.population) }}</td>
+            <td>
+              {% set percentage = (province.population / total_population * 100)|round(2) %}
+              {{ percentage }}%
+            </td>
+            {% if has_liter and province.id in province_targets and province_targets[province.id].liter_capacity is not none %}
+              <td>{{ "{:,.2f}".format(province_targets[province.id].liter_capacity) }}</td>
+            {% elif has_liter %}
+              <td>-</td>
+            {% endif %}
+            {% if has_shrink and province.id in province_targets and province_targets[province.id].shrink_capacity is not none %}
+              <td>{{ "{:,.2f}".format(province_targets[province.id].shrink_capacity) }}</td>
+            {% elif has_shrink %}
+              <td>-</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // SVG map of Iran with provinces
+      const iranMapSvg = `
+        <svg id="iran-map" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+          <path id="tehran" d="M400 200 L420 180 L440 190 L430 210 L410 215 Z" />
+          <path id="isfahan" d="M380 250 L420 230 L450 260 L420 290 L370 270 Z" />
+          <path id="khorasan-razavi" d="M550 150 L580 130 L620 170 L590 200 L540 190 Z" />
+          <path id="fars" d="M400 320 L430 300 L470 320 L450 350 L410 360 Z" />
+          <path id="khuzestan" d="M300 300 L340 280 L370 310 L350 340 L310 330 Z" />
+          <path id="east-azerbaijan" d="M250 100 L290 80 L310 110 L280 130 L240 120 Z" />
+          <path id="mazandaran" d="M420 120 L450 100 L480 120 L460 140 L430 135 Z" />
+          <path id="west-azerbaijan" d="M180 120 L220 100 L240 130 L210 150 L170 140 Z" />
+          <path id="kerman" d="M500 300 L540 280 L570 310 L550 340 L510 350 Z" />
+          <path id="sistan-baluchistan" d="M600 300 L640 280 L680 310 L650 350 L610 350 Z" />
+          <path id="alborz" d="M380 170 L400 150 L420 170 L410 190 L370 185 Z" />
+          <path id="gilan" d="M320 130 L350 110 L370 140 L350 160 L320 155 Z" />
+          <path id="kermanshah" d="M220 220 L250 200 L270 230 L250 250 L220 245 Z" />
+          <path id="lorestan" d="M270 250 L300 230 L320 260 L300 280 L270 275 Z" />
+          <path id="hamadan" d="M270 200 L300 180 L320 210 L300 230 L270 225 Z" />
+          <path id="golestan" d="M480 140 L510 120 L530 150 L510 170 L480 165 Z" />
+          <path id="kurdistan" d="M220 180 L250 160 L270 190 L250 210 L220 205 Z" />
+          <path id="hormozgan" d="M450 380 L490 360 L520 390 L500 410 L460 405 Z" />
+          <path id="markazi" d="M320 210 L350 190 L370 220 L350 240 L320 235 Z" />
+          <path id="ardabil" d="M280 70 L310 50 L330 80 L310 100 L280 95 Z" />
+          <path id="qazvin" d="M350 160 L380 140 L400 170 L380 190 L350 185 Z" />
+          <path id="qom" d="M370 210 L400 190 L420 220 L400 240 L370 235 Z" />
+          <path id="yazd" d="M450 280 L480 260 L500 290 L480 310 L450 305 Z" />
+          <path id="zanjan" d="M300 140 L330 120 L350 150 L330 170 L300 165 Z" />
+          <path id="bushehr" d="M330 350 L360 330 L380 360 L360 380 L330 375 Z" />
+          <path id="chaharmahal" d="M350 270 L380 250 L400 280 L380 300 L350 295 Z" />
+          <path id="north-khorasan" d="M500 100 L530 80 L550 110 L530 130 L500 125 Z" />
+          <path id="kohgiluyeh" d="M360 320 L390 300 L410 330 L390 350 L360 345 Z" />
+          <path id="south-khorasan" d="M540 220 L570 200 L590 230 L570 250 L540 245 Z" />
+          <path id="semnan" d="M460 180 L490 160 L510 190 L490 210 L460 205 Z" />
+          <path id="ilam" d="M240 270 L270 250 L290 280 L270 300 L240 295 Z" />
+          <!-- Add province names -->
+          <text x="405" y="200" font-size="8">تهران</text>
+          <text x="410" y="260" font-size="8">اصفهان</text>
+          <text x="570" y="170" font-size="8">خراسان رضوی</text>
+          <text x="430" y="330" font-size="8">فارس</text>
+          <text x="330" y="310" font-size="8">خوزستان</text>
+          <text x="270" y="110" font-size="8">آذربایجان شرقی</text>
+          <text x="445" y="125" font-size="8">مازندران</text>
+          <text x="200" y="130" font-size="8">آذربایجان غربی</text>
+          <text x="530" y="310" font-size="8">کرمان</text>
+          <text x="640" y="310" font-size="8">سیستان و بلوچستان</text>
+          <text x="385" y="170" font-size="8">البرز</text>
+          <text x="335" y="140" font-size="8">گیلان</text>
+          <text x="235" y="230" font-size="8">کرمانشاه</text>
+          <text x="285" y="260" font-size="8">لرستان</text>
+          <text x="285" y="210" font-size="8">همدان</text>
+          <text x="495" y="150" font-size="8">گلستان</text>
+          <text x="235" y="190" font-size="8">کردستان</text>
+          <text x="480" y="390" font-size="8">هرمزگان</text>
+          <text x="335" y="220" font-size="8">مرکزی</text>
+          <text x="295" y="80" font-size="8">اردبیل</text>
+          <text x="365" y="170" font-size="8">قزوین</text>
+          <text x="385" y="220" font-size="8">قم</text>
+          <text x="475" y="290" font-size="8">یزد</text>
+          <text x="315" y="150" font-size="8">زنجان</text>
+          <text x="345" y="360" font-size="8">بوشهر</text>
+          <text x="375" y="280" font-size="8">چهارمحال</text>
+          <text x="515" y="115" font-size="8">خراسان شمالی</text>
+          <text x="375" y="330" font-size="8">کهگیلویه</text>
+          <text x="555" y="230" font-size="8">خراسان جنوبی</text>
+          <text x="475" y="195" font-size="8">سمنان</text>
+          <text x="255" y="280" font-size="8">ایلام</text>
+        </svg>
+      `;
+      
+      // Insert the SVG into the container
+      const mapContainer = document.getElementById('iran-map-container');
+      if (mapContainer) {
+        mapContainer.innerHTML = iranMapSvg;
+        
+        // Get all provinces in the SVG
+        const provincePaths = document.querySelectorAll('#iran-map path');
+        
+        // Set default styling
+        provincePaths.forEach(path => {
+          path.setAttribute('fill', '#e2e8f0');
+          path.setAttribute('stroke', '#1e293b');
+          path.setAttribute('stroke-width', '1');
+        });
+        
+        // Initialize tooltips data
+        {% if provinces and province_targets and province_targets|length > 0 %}
+          const provinceData = {
+            // Map simplified province names to their full names
+            'tehran': '{{ provinces|selectattr("name", "equalto", "تهران")|map(attribute="id")|first }}',
+            'isfahan': '{{ provinces|selectattr("name", "equalto", "اصفهان")|map(attribute="id")|first }}',
+            'khorasan-razavi': '{{ provinces|selectattr("name", "equalto", "خراسان رضوی")|map(attribute="id")|first }}',
+            'fars': '{{ provinces|selectattr("name", "equalto", "فارس")|map(attribute="id")|first }}',
+            'khuzestan': '{{ provinces|selectattr("name", "equalto", "خوزستان")|map(attribute="id")|first }}',
+            'east-azerbaijan': '{{ provinces|selectattr("name", "equalto", "آذربایجان شرقی")|map(attribute="id")|first }}',
+            'mazandaran': '{{ provinces|selectattr("name", "equalto", "مازندران")|map(attribute="id")|first }}',
+            'west-azerbaijan': '{{ provinces|selectattr("name", "equalto", "آذربایجان غربی")|map(attribute="id")|first }}',
+            'kerman': '{{ provinces|selectattr("name", "equalto", "کرمان")|map(attribute="id")|first }}',
+            'sistan-baluchistan': '{{ provinces|selectattr("name", "equalto", "سیستان و بلوچستان")|map(attribute="id")|first }}',
+            'alborz': '{{ provinces|selectattr("name", "equalto", "البرز")|map(attribute="id")|first }}',
+            'gilan': '{{ provinces|selectattr("name", "equalto", "گیلان")|map(attribute="id")|first }}',
+            'kermanshah': '{{ provinces|selectattr("name", "equalto", "کرمانشاه")|map(attribute="id")|first }}',
+            'lorestan': '{{ provinces|selectattr("name", "equalto", "لرستان")|map(attribute="id")|first }}',
+            'hamadan': '{{ provinces|selectattr("name", "equalto", "همدان")|map(attribute="id")|first }}',
+            'golestan': '{{ provinces|selectattr("name", "equalto", "گلستان")|map(attribute="id")|first }}',
+            'kurdistan': '{{ provinces|selectattr("name", "equalto", "کردستان")|map(attribute="id")|first }}',
+            'hormozgan': '{{ provinces|selectattr("name", "equalto", "هرمزگان")|map(attribute="id")|first }}',
+            'markazi': '{{ provinces|selectattr("name", "equalto", "مرکزی")|map(attribute="id")|first }}',
+            'ardabil': '{{ provinces|selectattr("name", "equalto", "اردبیل")|map(attribute="id")|first }}',
+            'qazvin': '{{ provinces|selectattr("name", "equalto", "قزوین")|map(attribute="id")|first }}',
+            'qom': '{{ provinces|selectattr("name", "equalto", "قم")|map(attribute="id")|first }}',
+            'yazd': '{{ provinces|selectattr("name", "equalto", "یزد")|map(attribute="id")|first }}',
+            'zanjan': '{{ provinces|selectattr("name", "equalto", "زنجان")|map(attribute="id")|first }}',
+            'bushehr': '{{ provinces|selectattr("name", "equalto", "بوشهر")|map(attribute="id")|first }}',
+            'chaharmahal': '{{ provinces|selectattr("name", "equalto", "چهارمحال و بختیاری")|map(attribute="id")|first }}',
+            'north-khorasan': '{{ provinces|selectattr("name", "equalto", "خراسان شمالی")|map(attribute="id")|first }}',
+            'kohgiluyeh': '{{ provinces|selectattr("name", "equalto", "کهگیلویه و بویراحمد")|map(attribute="id")|first }}',
+            'south-khorasan': '{{ provinces|selectattr("name", "equalto", "خراسان جنوبی")|map(attribute="id")|first }}',
+            'semnan': '{{ provinces|selectattr("name", "equalto", "سمنان")|map(attribute="id")|first }}',
+            'ilam': '{{ provinces|selectattr("name", "equalto", "ایلام")|map(attribute="id")|first }}'
+          };
+          
+          // Function to map percentages to colors (from light to dark blue)
+          function getColor(percentage) {
+            // Scale from light blue (#dbeafe) to dark blue (#1e40af) based on percentage
+            if (!percentage) return '#e2e8f0'; // Default gray for no data
+            
+            // Convert percentage (0-100) to a value between 0 and 1
+            const value = percentage / 100;
+            
+            // Color components
+            const r = Math.round(219 - (value * (219 - 30)));
+            const g = Math.round(234 - (value * (234 - 64)));
+            const b = Math.round(254 - (value * (254 - 175)));
+            
+            return `rgb(${r}, ${g}, ${b})`;
+          }
+          
+          // Apply coloring based on percentages and set up tooltips
+          provincePaths.forEach(path => {
+            const provinceId = path.id;
+            const provinceDbId = provinceData[provinceId];
+            
+            if (provinceDbId) {
+              // Find the province and its target
+              {% for province in provinces %}
+                if (provinceDbId == '{{ province.id }}') {
+                  // Get province details
+                  const provinceName = '{{ province.name }}';
+                  const population = {{ province.population }};
+                  const totalPopulation = {{ total_population }};
+                  const percentage = (population / totalPopulation * 100).toFixed(2);
+                  
+                  {% if province.id in province_targets %}
+                    {% if province_targets[province.id].liter_percentage is not none %}
+                      const literPercentage = {{ province_targets[province.id].liter_percentage }};
+                      const literCapacity = {{ province_targets[province.id].liter_capacity }};
+                    {% endif %}
+                    
+                    {% if province_targets[province.id].shrink_percentage is not none %}
+                      const shrinkPercentage = {{ province_targets[province.id].shrink_percentage }};
+                      const shrinkCapacity = {{ province_targets[province.id].shrink_capacity }};
+                    {% endif %}
+                    
+                    // Use liter percentage if available, otherwise shrink percentage
+                    {% if province_targets[province.id].liter_percentage is not none %}
+                      path.setAttribute('fill', getColor({{ province_targets[province.id].liter_percentage }}));
+                    {% elif province_targets[province.id].shrink_percentage is not none %}
+                      path.setAttribute('fill', getColor({{ province_targets[province.id].shrink_percentage }}));
+                    {% endif %}
+                    
+                    // Set tooltip data attributes
+                    path.setAttribute('data-name', provinceName);
+                    path.setAttribute('data-population', population.toLocaleString());
+                    path.setAttribute('data-percentage', percentage + '%');
+                    
+                    {% if province_targets[province.id].liter_capacity is not none %}
+                      path.setAttribute('data-liter', {{ province_targets[province.id].liter_capacity }}.toFixed(2));
+                    {% endif %}
+                    
+                    {% if province_targets[province.id].shrink_capacity is not none %}
+                      path.setAttribute('data-shrink', {{ province_targets[province.id].shrink_capacity }}.toFixed(2));
+                    {% endif %}
+                  {% endif %}
+                }
+              {% endfor %}
+            }
+            
+            // Add hover effects and tooltip
+            path.addEventListener('mouseover', function(e) {
+              this.setAttribute('stroke-width', '2');
+              this.setAttribute('stroke', '#1e40af');
+              
+              if (this.hasAttribute('data-name')) {
+                // Show tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'province-tooltip';
+                tooltip.style.position = 'absolute';
+                tooltip.style.left = (e.pageX + 10) + 'px';
+                tooltip.style.top = (e.pageY + 10) + 'px';
+                tooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                tooltip.style.border = '1px solid #cbd5e1';
+                tooltip.style.borderRadius = '0.375rem';
+                tooltip.style.padding = '0.75rem';
+                tooltip.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                tooltip.style.zIndex = '100';
+                tooltip.style.fontSize = '0.875rem';
+                tooltip.style.direction = 'rtl';
+                
+                let tooltipContent = `
+                  <div><strong>${this.getAttribute('data-name')}</strong></div>
+                  <div>جمعیت: ${this.getAttribute('data-population')}</div>
+                  <div>درصد: ${this.getAttribute('data-percentage')}</div>
+                `;
+                
+                if (this.hasAttribute('data-liter')) {
+                  tooltipContent += `<div>ظرفیت لیتر: ${this.getAttribute('data-liter')}</div>`;
+                }
+                
+                if (this.hasAttribute('data-shrink')) {
+                  tooltipContent += `<div>ظرفیت شرینک: ${this.getAttribute('data-shrink')}</div>`;
+                }
+                
+                tooltip.innerHTML = tooltipContent;
+                document.body.appendChild(tooltip);
+                this.tooltip = tooltip;
+              }
+            });
+            
+            path.addEventListener('mousemove', function(e) {
+              if (this.tooltip) {
+                this.tooltip.style.left = (e.pageX + 10) + 'px';
+                this.tooltip.style.top = (e.pageY + 10) + 'px';
+              }
+            });
+            
+            path.addEventListener('mouseout', function() {
+              this.setAttribute('stroke-width', '1');
+              this.setAttribute('stroke', '#1e293b');
+              
+              // Remove tooltip
+              if (this.tooltip) {
+                document.body.removeChild(this.tooltip);
+                this.tooltip = null;
+              }
+            });
+          });
+        {% endif %}
+      }
+    });
+  </script>
+</body>
+</html>

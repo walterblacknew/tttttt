@@ -13,7 +13,7 @@
       margin: 0;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1200px;
       margin: auto;
       background: #fff;
       padding: 2rem;
@@ -27,10 +27,33 @@
     h2 {
       margin-top: 2rem;
     }
+    .summary {
+      background: #f1f5f9;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+    .summary-label {
+      font-weight: 500;
+      color: #475569;
+    }
+    .summary-value {
+      font-weight: 600;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 1rem;
+      font-size: 0.9rem;
     }
     th, td {
       padding: 0.75rem;
@@ -40,9 +63,119 @@
     th {
       background-color: #f0f4f8;
       color: #243b53;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
     .section {
       margin-bottom: 2rem;
+    }
+    .table-container {
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .score-column {
+      background-color: #eff6ff;
+      font-weight: 500;
+    }
+    td.score-column {
+      background-color: #f8fafc;
+    }
+    .total-score-column {
+      background-color: #ecfdf5;
+      font-weight: 700;
+    }
+    td.total-score-column {
+      background-color: #f0fdf4;
+    }
+    .grade-cell {
+      font-weight: bold;
+      background-color: #f0fdf4;
+      text-align: center;
+      color: #047857;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #334e68;
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      margin-top: 1rem;
+      text-align: center;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+    .btn:hover {
+      background-color: #243b53;
+    }
+    .btn-secondary {
+      background-color: #64748b;
+    }
+    .btn-secondary:hover {
+      background-color: #475569;
+    }
+    .back-link {
+      margin-top: 2rem;
+      text-align: center;
+    }
+    .legend {
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+      background: #f8fafc;
+    }
+    .legend-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.25rem;
+    }
+    .legend-color {
+      width: 1rem;
+      height: 1rem;
+      margin-left: 0.5rem;
+      border-radius: 0.125rem;
+    }
+    .no-data {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+      font-style: italic;
+    }
+    .grade-mappings {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f1f5f9;
+      border-radius: 0.5rem;
+      border: 1px solid #e2e8f0;
+    }
+    .grade-mappings-title {
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .grade-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .grade-item {
+      background: #fff;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      border: 1px solid #cbd5e1;
+      font-size: 0.875rem;
+    }
+    .grade-letter {
+      font-weight: 700;
+      color: #047857;
     }
   </style>
 </head>
@@ -50,57 +183,168 @@
   <div class="container">
     <h1>نتیجه ارزیابی با CSV/Excel</h1>
     
+    <!-- Summary Section -->
+    <div class="summary">
+      <div class="summary-row">
+        <span class="summary-label">تعداد کل سطرها:</span>
+        <span class="summary-value">{{ (valid_rows|length) + (missing_rows|length) }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">تعداد سطرهای ارزیابی شده:</span>
+        <span class="summary-value">{{ valid_rows|length }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">تعداد سطرهای ناقص (حذف شده):</span>
+        <span class="summary-value">{{ missing_rows|length }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">پارامترهای ارزیابی:</span>
+        <span class="summary-value">{{ config|length }} پارامتر</span>
+      </div>
+    </div>
+    
+    <!-- Grade Mappings -->
+    <div class="grade-mappings">
+      <div class="grade-mappings-title">درجه‌بندی مورد استفاده:</div>
+      <div class="grade-list">
+        {% if grade_mappings %}
+          {% for mapping in grade_mappings %}
+            <div class="grade-item">
+              <span class="grade-letter">{{ mapping.grade_letter }}:</span> 
+              حداقل امتیاز {{ mapping.min_score }}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="grade-item">هیچ درجه‌بندی تعریف نشده است.</div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Legend for color coding -->
+    <div class="legend">
+      <div class="legend-title">راهنمای رنگ‌ها:</div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #f8fafc;"></div>
+        <span>نمره پارامتر</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #f0fdf4;"></div>
+        <span>نمره کل و درجه نهایی</span>
+      </div>
+    </div>
+    
     <!-- Section: Valid Evaluated Data -->
     {% if valid_rows %}
     <div class="section">
-      <h2>داده‌های معتبر</h2>
-      <table>
-        <thead>
-          <tr>
-            {% for key in valid_rows[0].keys() %}
-              <th>{{ key }}</th>
+      <h2>نتایج ارزیابی</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              {% for key in valid_rows[0].keys() %}
+                {% if key.startswith('نمره ') and key != 'نمره کل' %}
+                  <th class="score-column">{{ key }}</th>
+                {% elif key == 'نمره کل' %}
+                  <th class="total-score-column">{{ key }}</th>
+                {% elif key == 'درجه' %}
+                  <th class="total-score-column">{{ key }}</th>
+                {% else %}
+                  <th>{{ key }}</th>
+                {% endif %}
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in valid_rows %}
+            <tr>
+              {% for key, value in row.items() %}
+                {% if key.startswith('نمره ') and key != 'نمره کل' %}
+                  <td class="score-column">{{ value }}</td>
+                {% elif key == 'نمره کل' %}
+                  <td class="total-score-column">{{ value }}</td>
+                {% elif key == 'درجه' %}
+                  <td class="grade-cell">{{ value }}</td>
+                {% else %}
+                  <td>{{ value }}</td>
+                {% endif %}
+              {% endfor %}
+            </tr>
             {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in valid_rows %}
-          <tr>
-            {% for value in row.values() %}
-              <td>{{ value }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </div>
     {% else %}
-      <p>هیچ داده معتبری یافت نشد.</p>
+      <div class="no-data">هیچ داده معتبری یافت نشد.</div>
     {% endif %}
     
     <!-- Section: Rows with Missing Data -->
     {% if missing_rows %}
     <div class="section">
       <h2>داده‌های ناقص / مفقود</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              {% for key in missing_rows[0].keys() %}
+                <th>{{ key }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in missing_rows %}
+            <tr>
+              {% for value in row.values() %}
+                <td>{{ value }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Configuration Summary -->
+    {% if config %}
+    <div class="section">
+      <h2>خلاصه تنظیمات ارزیابی</h2>
       <table>
         <thead>
           <tr>
-            {% for key in missing_rows[0].keys() %}
-              <th>{{ key }}</th>
-            {% endfor %}
+            <th>نام پارامتر</th>
+            <th>نوع پارامتر</th>
+            <th>وزن</th>
           </tr>
         </thead>
         <tbody>
-          {% for row in missing_rows %}
+          {% for param, settings in config.items() %}
           <tr>
-            {% for value in row.values() %}
-              <td>{{ value }}</td>
-            {% endfor %}
+            <td>{{ param }}</td>
+            <td>{{ 'توصیفی' if settings.type == 'descriptive' else 'عددی' }}</td>
+            <td>{{ settings.weight }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% endif %}
+    
+    <!-- Action Buttons -->
+    <div class="back-link">
+      <a href="{{ url_for('admin_evaluate_csv') }}" class="btn btn-secondary">بازگشت به صفحه آپلود</a>
+      {% if valid_rows %}
+      <button onclick="window.print()" class="btn">چاپ نتایج</button>
+      <a href="{{ url_for('admin_quotas') }}" class="btn">بازگشت به صفحه سهمیه‌ها</a>
+      {% endif %}
+    </div>
   </div>
+  
+  <script>
+    // JavaScript for highlighting grade cells
+    document.addEventListener('DOMContentLoaded', function() {
+      // Optional: Can add dynamic behavior here if needed
+    });
+  </script>
 </body>
 </html>

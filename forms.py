@@ -144,3 +144,13 @@ class CustomerEvaluationForm(FlaskForm):
     brand_score = FloatField('امتیاز حضور برندهای معتبر', validators=[DataRequired()])
 
     submit = SubmitField('ذخیره ارزیابی')
+
+# --------------------- Target Setting Form ---------------------
+class TargetSettingForm(FlaskForm):
+    liter_enabled = BooleanField('ظرفیت بر حسب لیتر')
+    liter_capacity = FloatField('ظرفیت کل (لیتر)', validators=[Optional()])
+    
+    shrink_enabled = BooleanField('ظرفیت بر حسب شرینک')
+    shrink_capacity = FloatField('ظرفیت کل (شرینک)', validators=[Optional()])
+    
+    submit = SubmitField('محاسبه و ذخیره تارگت‌ها')
