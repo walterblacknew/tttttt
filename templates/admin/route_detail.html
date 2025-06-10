@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مدیریت مسیر | جزئیات مسیر</title>
+  <!-- فونت وزیر یا هر فونت دیگر -->
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: 'Vazirmatn', sans-serif;
+      background-color: #f1f5f9;
+      color: #1e293b;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+    .route-info {
+      margin-bottom: 1.5rem;
+    }
+    .assigned-marketers,
+    .points-list {
+      margin-bottom: 1.5rem;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+    li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    li:last-child {
+      border-bottom: none;
+    }
+    .point-item form {
+      display: inline-block;
+      margin-right: 1rem;
+    }
+    button.btn-danger {
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+    }
+    button.btn-danger:hover {
+      background: #dc2626;
+    }
+    .point-form {
+      margin-top: 1rem;
+    }
+    .point-form label {
+      display: block;
+      margin-top: 0.75rem;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+      color: #475569;
+      font-weight: 500;
+    }
+    .point-form input,
+    .point-form textarea {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+    }
+    .point-form button {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      margin-top: 0.75rem;
+    }
+    .point-form button:hover {
+      background: #4338ca;
+    }
+    .actions-bar {
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      font-weight: 500;
+      border: none;
+      color: #fff;
+    }
+    .btn-primary {
+      background-color: #4f46e5;
+    }
+    .btn-primary:hover {
+      background-color: #4338ca;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Actions bar at top (optional) -->
+    <div class="actions-bar">
+      <h1>مدیریت مسیر: {{ route.name }}</h1>
+      <button class="btn btn-primary" onclick="window.location.href='{{ url_for('admin_routes') }}'">
+        بازگشت به لیست مسیرها
+      </button>
+    </div>
+
+    <div class="route-info">
+      <p><strong>توضیحات:</strong> {{ route.description or 'بدون توضیحات' }}</p>
+    </div>
+
+    <!-- Show assigned marketers -->
+    <h2>بازاریاب‌های اختصاص داده شده</h2>
+    <div class="assigned-marketers">
+      {% if route.assignments|length > 0 %}
+        <ul>
+          {% for assignment in route.assignments %}
+            <li>{{ assignment.marketer.fullname or assignment.marketer.username }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>هنوز بازاریابی به این مسیر اختصاص داده نشده است.</p>
+      {% endif %}
+    </div>
+
+    <!-- Show existing points -->
+    <h2>نقاط ثبت شده</h2>
+    <div class="points-list">
+      {% if route.points|length > 0 %}
+        <ul>
+          {% for point in route.points %}
+            <li class="point-item">
+              <strong>ترتیب:</strong> {{ point.order }} -
+              <strong>نام:</strong> {{ point.name }}  
+              <span>({{ point.latitude }}, {{ point.longitude }})</span><br>
+              {% if point.address %}
+                <small>{{ point.address }}</small><br>
+              {% endif %}
+
+              <!-- Delete Point Form -->
+              <form action="{{ url_for('delete_route_point', route_id=route.id, point_id=point.id) }}"
+                    method="POST"
+                    onsubmit="return confirm('آیا مطمئنید که می‌خواهید حذف کنید؟');">
+                <button type="submit" class="btn-danger">حذف</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>هیچ نقطه‌ای برای این مسیر ثبت نشده است.</p>
+      {% endif %}
+    </div>
+
+    <!-- Form to add a new point -->
+    <h2>افزودن نقطه جدید</h2>
+    <form class="point-form" method="POST" action="{{ url_for('admin_route_detail', route_id=route.id) }}">
+      {{ point_form.hidden_tag() }}
+
+      <label for="name">{{ point_form.name.label.text }}</label>
+      {{ point_form.name(id="name", placeholder="نام نقطه را وارد کنید") }}
+
+      <label for="latitude">{{ point_form.latitude.label.text }}</label>
+      {{ point_form.latitude(id="latitude", placeholder="مثال: 35.6892") }}
+
+      <label for="longitude">{{ point_form.longitude.label.text }}</label>
+      {{ point_form.longitude(id="longitude", placeholder="مثال: 51.3890") }}
+
+      <label for="address">{{ point_form.address.label.text }}</label>
+      {{ point_form.address(id="address", rows="2", placeholder="آدرس کامل را وارد کنید") }}
+
+      <label for="order">{{ point_form.order.label.text }}</label>
+      {{ point_form.order(id="order", placeholder="ترتیب نقطه در مسیر") }}
+
+      <button type="submit">افزودن نقطه</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مدیریت اطلاعات مشتریان (CSV) | فول‌اسکرین</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 1rem;
+      background-color: #f1f5f9;
+      font-family: 'Vazirmatn', sans-serif;
+      color: #1e293b;
+    }
+    h1, h2 {
+      margin-bottom: 1rem;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 0.875rem;
+      text-decoration: none;
+    }
+    .btn:hover {
+      background: #4338ca;
+    }
+    .btn-danger {
+      background: #ef4444 !important;
+    }
+    .btn-danger:hover {
+      background: #dc2626 !important;
+    }
+    .upload-form, .csv-wrapper {
+      background: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 2rem;
+    }
+    label {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      display: block;
+      color: #64748b;
+    }
+    input[type="file"], select {
+      margin-bottom: 0.5rem;
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+    }
+    .province-filter {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .preview-section {
+      margin-top: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .search-box {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: right;
+    }
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #64748b;
+    }
+    tr:hover td {
+      background-color: #f8fafc;
+    }
+    .batch-card {
+      background-color: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .batch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .batch-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .batch-info {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+    .batch-actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .flash {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      background: #f0fdf4;
+      border-left: 4px solid #22c55e;
+    }
+    .flash.error {
+      background: #fef2f2;
+      border-left-color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <h1>مدیریت کامل اطلاعات مشتریان (CSV)</h1>
+
+  <!-- Upload Form with Province Selection -->
+  <div class="upload-form">
+    <form action="{{ url_for('admin_upload_customer_csv') }}" method="POST" enctype="multipart/form-data">
+      <div style="margin-bottom: 1rem;">
+        <label for="customer_csv">بارگذاری فایل CSV اطلاعات مشتریان:</label>
+        <input type="file" id="customer_csv" name="customer_csv" accept=".csv" required>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label for="province">استان:</label>
+        <select id="province" name="province" required>
+          <option value="">انتخاب استان</option>
+          {% for province in provinces %}
+            <option value="{{ province.name }}">{{ province.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn">بارگذاری</button>
+    </form>
+  </div>
+
+  <!-- Province Filter -->
+  <div class="province-filter">
+    <label for="provinceFilter">فیلتر بر اساس استان:</label>
+    <select id="provinceFilter" onchange="filterByProvince(this.value)">
+      <option value="">همه استان‌ها</option>
+      {% for province in provinces %}
+        <option value="{{ province.name }}">{{ province.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Batches by Province -->
+  <div id="provinceBatches">
+    {% for province_name, province_data in customer_data_by_province.items() %}
+      <div class="batch-card" data-province="{{ province_name }}">
+        <div class="batch-header">
+          <div class="batch-title">{{ province_name }}</div>
+          <div class="batch-info">
+            تعداد رکورد: {{ province_data|length }}
+          </div>
+        </div>
+
+        <div class="search-box">
+          <input type="text"
+                 placeholder="جستجو در داده‌های {{ province_name }}..."
+                 onkeyup="filterProvinceData('{{ province_name }}', this.value)">
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                {% for header in column_headers %}
+                <th>{{ header }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody id="tableBody{{ province_name|replace(' ', '') }}">
+              {% for row in province_data %}
+              <tr>
+                {% for header in column_headers %}
+                <td>{{ row[header] }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Filter by province
+    function filterByProvince(province) {
+      const cards = document.querySelectorAll('.batch-card');
+      cards.forEach(card => {
+        if (!province || card.dataset.province === province) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Filter data within a province
+    function filterProvinceData(province, query) {
+      query = query.toLowerCase();
+      const tableBody = document.getElementById(`tableBody${province.replace(' ', '')}`);
+      const rows = tableBody.getElementsByTagName('tr');
+
+      for (let row of rows) {
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+
+        for (let cell of cells) {
+          if (cell.textContent.toLowerCase().includes(query)) {
+            found = true;
+            break;
+          }
+        }
+
+        row.style.display = found ? '' : 'none';
+      }
+    }
+  </script>
+</body>
+</html>

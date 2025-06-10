@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>موقعیت بازاریاب‌ها (نقشه تاریک)</title>
+  <!-- فونت وزیر -->
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #111; /* fallback dark */
+      font-family: 'Vazirmatn', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header (optional) */
+    .header {
+      background: #222;
+      padding: 1rem;
+      color: #fff;
+      text-align: center;
+      font-size: 1.125rem;
+    }
+
+    #map {
+      flex-grow: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Pulsing Marker CSS */
+    .pulse-marker {
+      width: 20px;
+      height: 20px;
+      background-color: #3b82f6; /* "blue-500" */
+      border-radius: 50%;
+      border: 2px solid #fff; 
+      animation: pulse 1.5s infinite;
+      opacity: 0.9;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.7);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.3);
+        opacity: 1.0;
+      }
+      100% {
+        transform: scale(0.7);
+        opacity: 0.8;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Optional Header -->
+  <div class="header">
+    موقعیت زنده بازاریاب‌ها (نقشه تاریک)
+  </div>
+
+  <!-- Map Container -->
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let map;
+    let markers = [];
+
+    // Initialize the dark map
+    function initMap() {
+      map = L.map('map', {
+        center: [35.6892, 51.3890], // Tehran as default
+        zoom: 12
+      });
+
+      // CartoDB Dark Matter tile layer (black background)
+      L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        {
+          attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 19
+        }
+      ).addTo(map);
+    }
+
+    // Fetch real marketer locations from the server
+    async function fetchMarketerLocations() {
+      try {
+        // Adjust the endpoint to match your server's route
+        const response = await fetch('/api/observer/marketer-locations');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Display them
+        displayMarkers(data);
+      } catch (error) {
+        console.error('Error fetching marketer locations:', error);
+        alert('خطا در دریافت موقعیت بازاریاب‌ها');
+      }
+    }
+
+    function displayMarkers(locations) {
+      clearMarkers();
+
+      // Create a LatLngBounds to fit all markers in view
+      const bounds = L.latLngBounds();
+
+      locations.forEach((loc) => {
+        // If the server returns lat/lng in numeric form
+        const lat = parseFloat(loc.lat);
+        const lng = parseFloat(loc.lng);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const markerIcon = L.divIcon({
+            className: 'pulse-marker',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+            popupAnchor: [0, -10],
+          });
+
+          const marker = L.marker([lat, lng], {
+            icon: markerIcon
+          }).addTo(map);
+
+          marker.bindPopup(`
+            <strong>${loc.name || 'بازاریاب'}</strong><br>
+            مختصات: ${lat}, ${lng}<br>
+            آخرین بروزرسانی: ${loc.last_update || '-'}
+          `);
+
+          markers.push(marker);
+          bounds.extend([lat, lng]);
+        }
+      });
+
+      // Fit the map to show all markers if we have any
+      if (markers.length > 0) {
+        map.fitBounds(bounds, {padding: [30, 30]});
+      }
+    }
+
+    function clearMarkers() {
+      markers.forEach(marker => map.removeLayer(marker));
+      markers = [];
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      fetchMarketerLocations(); // Initial load
+
+      // Auto-refresh every 10 seconds
+      setInterval(fetchMarketerLocations, 10000);
+    });
+  </script>
+</body>
+</html>

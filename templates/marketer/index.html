@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
+    <title>پنل بازاریاب</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #22c55e;
+            --primary-hover: #16a34a;
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f97316;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --bottom-nav-height: 64px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Vazirmatn', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding-bottom: var(--bottom-nav-height);
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 1rem;
+            margin: 0 auto;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            background: var(--card-background);
+            padding: 1rem;
+            z-index: 40;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn-icon:hover {
+            background-color: #f1f5f9;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .action-card {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
+            touch-action: manipulation;
+            cursor: pointer;
+        }
+
+        .action-card:active {
+            transform: scale(0.98);
+        }
+
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 0.5rem;
+            background: #f0fdf4;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+        }
+
+        .action-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .action-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .stats-card {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stats-title {
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 0.75rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .chart-card {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .chart-header {
+            margin-bottom: 1rem;
+        }
+
+        .chart-filters {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 0.5rem 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .chart-filters::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filter-chip {
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            background: #f8fafc;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            white-space: nowrap;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .filter-chip.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        #chartContainer {
+            width: 100%;
+            height: 250px;
+            position: relative;
+        }
+
+        .schedule-card {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .schedule-title {
+            font-weight: 600;
+        }
+
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            gap: 1rem;
+        }
+
+        .schedule-item:last-child {
+            border-bottom: none;
+        }
+
+        .schedule-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0fdf4;
+            color: var(--primary-color);
+            flex-shrink: 0;
+        }
+
+        .schedule-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .schedule-store {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .schedule-address {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .schedule-time {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-background);
+            padding: 0.5rem;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            height: var(--bottom-nav-height);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            gap: 0.25rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            touch-action: manipulation;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+            background: #f0fdf4;
+        }
+
+        .nav-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: calc(var(--bottom-nav-height) + 1rem);
+            right: 1rem;
+            background: var(--primary-color);
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 45;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 768px;
+                padding: 2rem;
+            }
+            .quick-actions {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .fab {
+                right: calc((100% - 768px) / 2 + 1rem);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="page-title">سلام، {{ current_user.fullname or current_user.username }}</h1>
+            <button class="btn-icon" onclick="location.href='{{ url_for('logout') }}'">
+                <i data-lucide="log-out"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-card" onclick="location.href='{{ url_for('marketer_map') }}'">
+                <div class="action-icon">
+                    <i data-lucide="map-pin"></i>
+                </div>
+                <div class="action-title">مسیر امروز</div>
+                <div class="action-subtitle">مشاهده نقاط فروش</div>
+            </div>
+
+            <div class="action-card" onclick="startVisit()">
+                <div class="action-icon">
+                    <i data-lucide="clipboard-check"></i>
+                </div>
+                <div class="action-title">ثبت بازدید</div>
+                <div class="action-subtitle">ثبت بازدید از فروشگاه</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-card">
+            <div class="stats-header">
+                <h2 class="stats-title">عملکرد امروز</h2>
+                <button class="btn-icon" onclick="refreshStats()">
+                    <i data-lucide="refresh-cw"></i>
+                </button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">۰</div>
+                    <div class="stat-label">بازدیدها</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">۰</div>
+                    <div class="stat-label">سفارشات</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">۰٪</div>
+                    <div class="stat-label">تحقق هدف</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">۰</div>
+                    <div class="stat-label">فروش (تومان)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h2 class="stats-title">نمودار عملکرد</h2>
+                <div class="chart-filters">
+                    <button class="filter-chip active">روزانه</button>
+                    <button class="filter-chip">هفتگی</button>
+                    <button class="filter-chip">ماهانه</button>
+                </div>
+            </div>
+            <div id="chartContainer">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Today's Schedule -->
+        <div class="schedule-card">
+            <div class="schedule-header">
+                <h2 class="schedule-title">برنامه امروز</h2>
+                <span class="schedule-date" id="todayDate"></span>
+            </div>
+            <div class="schedule-list" id="scheduleList">
+                <!-- Schedule items will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="location.href='{{ url_for('marketer_map') }}'">
+        <i data-lucide="navigation"></i>
+    </button>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a class="nav-item active" onclick="location.href='{{ url_for('marketer_index') }}'">
+            <i data-lucide="home"></i>
+            <span class="nav-label">خانه</span>
+        </a>
+        <a class="nav-item" onclick="location.href='{{ url_for('marketer_map') }}'">
+            <i data-lucide="map"></i>
+            <span class="nav-label">مسیر</span>
+        </a>
+        <a class="nav-item" onclick="openSalesForm()">
+            <i data-lucide="shopping-cart"></i>
+            <span class="nav-label">فروش</span>
+        </a>
+        <a class="nav-item" onclick="openReports()">
+            <i data-lucide="bar-chart-2"></i>
+            <span class="nav-label">گزارش‌ها</span>
+        </a>
+    </nav>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Performance Chart
+        function initChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+                    datasets: [{
+                        label: 'فروش',
+                        data: [0, 0, 0, 0, 0, 0, 0],  // Empty data to be filled later
+                        borderColor: '#22c55e',
+                        tension: 0.4,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('fa-IR').format(value / 1000000) + 'M';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            return performanceChart;
+        }
+
+        // Handle stat refresh
+        function refreshStats() {
+            const refreshIcon = document.querySelector('.stats-header .btn-icon i');
+            refreshIcon.style.transition = 'transform 0.5s ease';
+            refreshIcon.style.transform = 'rotate(360deg)';
+            
+            // Simulate API call
+            setTimeout(() => {
+                refreshIcon.style.transform = 'rotate(0)';
+                // Here you would update the stats with real data from your API
+                fetch('{{ url_for('get_marketer_assigned_routes') }}')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update stats based on data
+                        console.log('Stats updated:', data);
+                    })
+                    .catch(error => console.error('Error updating stats:', error));
+            }, 500);
+        }
+
+        // Start visit handler
+        function startVisit() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const { latitude, longitude } = position.coords;
+                    // Send location to backend and start visit
+                    fetch('{{ url_for('update_location') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ latitude, longitude })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Location updated:', data);
+                        window.location.href = '{{ url_for('marketer_map') }}';
+                    })
+                    .catch(error => console.error('Error updating location:', error));
+                }, error => {
+                    alert('برای ثبت بازدید، لطفا اجازه دسترسی به موقعیت مکانی را بدهید.');
+                });
+            } else {
+                alert('مرورگر شما از ثبت موقعیت مکانی پشتیبانی نمی‌کند.');
+            }
+        }
+
+        // Load route schedule
+        async function loadSchedule() {
+            try {
+                const response = await fetch('{{ url_for('get_marketer_assigned_routes') }}');
+                if (response.ok) {
+                    const routes = await response.json();
+                    const scheduleList = document.getElementById('scheduleList');
+                    scheduleList.innerHTML = '';
+
+                    if (routes.length > 0) {
+                        const todayRoute = routes[0];
+                        todayRoute.points.forEach(point => {
+                            const item = document.createElement('div');
+                            item.className = 'schedule-item';
+                            item.innerHTML = `
+                                <div class="schedule-icon">
+                                    <i data-lucide="store"></i>
+                                </div>
+                                <div class="schedule-info">
+                                    <div class="schedule-store">${point.name}</div>
+                                    <div class="schedule-address">${point.address || ''}</div>
+                                </div>
+                                <div class="schedule-time">-</div>
+                            `;
+                            scheduleList.appendChild(item);
+                        });
+                        lucide.createIcons();
+                    } else {
+                        scheduleList.innerHTML = '<div class="empty-state">برنامه‌ای برای امروز تعریف نشده است.</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+            }
+        }
+
+        // Set Persian date
+        function setPersianDate() {
+            const today = new Date();
+            document.getElementById('todayDate').textContent = today.toLocaleDateString('fa-IR');
+        }
+
+        // Navigation handlers
+        function openSalesForm() {
+            alert('فرم ثبت فروش در حال توسعه است.');
+        }
+
+        function openReports() {
+            alert('بخش گزارشات در حال توسعه است.');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            const chart = initChart();
+            setPersianDate();
+            loadSchedule();
+
+            // Request location permission early
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    position => console.log('Location access granted'),
+                    error => console.log('Location access denied')
+                );
+            }
+        });
+
+        // Handle pull-to-refresh
+        let touchStart = 0;
+        document.addEventListener('touchstart', e => {
+            touchStart = e.touches[0].clientY;
+        }, false);
+
+        document.addEventListener('touchend', e => {
+            const touchEnd = e.changedTouches[0].clientY;
+            if (window.scrollY === 0 && touchEnd > touchStart + 100) {
+                refreshStats();
+            }
+        }, false);
+
+        // Handle chart filters
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.filter-chip').forEach(c => {
+                    c.classList.remove('active');
+                });
+                chip.classList.add('active');
+                // Here you would update chart data based on selected filter
+            });
+        });
+    </script>
+</body>
+</html>

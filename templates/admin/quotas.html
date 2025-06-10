@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مدیریت ارزیابی و درجه‌بندی مشتریان | پنل مدیریت</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <!-- Add Font Awesome for better icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Global Styles */
+    body {
+      background-color: #f1f5f9;
+      font-family: 'Vazirmatn', sans-serif;
+      padding: 2rem;
+      color: #1e293b;
+      direction: rtl;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.75rem;
+      color: #334155;
+    }
+    /* Section styling */
+    .section {
+      background: #fff;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section h2 i {
+      color: #4f46e5;
+    }
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #475569;
+    }
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: #4f46e5;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    }
+    .submit-btn {
+      background-color: #4f46e5;
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .submit-btn:hover {
+      background-color: #4338ca;
+    }
+    /* Grade Mapping Table */
+    .grade-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .grade-table th, .grade-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: right;
+    }
+    .grade-table th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+    }
+    .grade-table tr:hover td {
+      background-color: #f1f5f9;
+    }
+    .grade-table tr:last-child td {
+      border-bottom: none;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn {
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background-color: #4f46e5;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background-color: #4338ca;
+    }
+    .btn-success {
+      background-color: #22c55e;
+      color: #fff;
+    }
+    .btn-success:hover {
+      background-color: #16a34a;
+    }
+    .btn-danger {
+      background-color: #ef4444;
+      color: #fff;
+    }
+    .btn-danger:hover {
+      background-color: #dc2626;
+    }
+    .btn-outline {
+      background-color: transparent;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-outline:hover {
+      background-color: #f8fafc;
+    }
+    /* Customer Table */
+    .search-box {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      box-sizing: border-box;
+    }
+    .customer-table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: right;
+      font-size: 0.875rem;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    tr:hover td {
+      background-color: #f1f5f9;
+    }
+    .eval-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background-color: #4f46e5;
+      color: #fff;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      font-size: 0.75rem;
+      transition: background-color 0.2s;
+    }
+    .eval-link:hover {
+      background-color: #4338ca;
+    }
+    
+    /* Badge with different colors */
+    .grade-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-align: center;
+      min-width: 2rem;
+    }
+    .grade-A {
+      background-color: #c7f2cd;
+      color: #166534;
+    }
+    .grade-B {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .grade-C {
+      background-color: #fef9c3;
+      color: #854d0e;
+    }
+    .grade-D {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+
+    /* New Batch Evaluation Styles */
+    .batch-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .batch-card {
+      background-color: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .batch-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+    .batch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .batch-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #334155;
+    }
+    .batch-date {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .batch-stats {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .batch-stat {
+      flex: 1;
+      background-color: #f8fafc;
+      border-radius: 0.375rem;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.25rem;
+    }
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .batch-grades {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .batch-grade-pill {
+      background-color: #f1f5f9;
+      border-radius: 9999px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .batch-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    /* Tabs for evaluations */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      padding: 0.75rem 1.25rem;
+      font-weight: 500;
+      color: #64748b;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: #4f46e5;
+      border-bottom-color: #4f46e5;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Flash messages */
+    .flash {
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+    .success {
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      color: #166534;
+    }
+    .danger {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #b91c1c;
+    }
+    .warning {
+      background-color: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+    .info {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      color: #1e40af;
+    }
+    
+    /* Section header with actions */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    /* Target Section Styles */
+    .checkbox-group {
+      margin-bottom: 1rem;
+    }
+    
+    .target-input {
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+    }
+    
+    .target-input:disabled {
+      background-color: #f1f5f9;
+      cursor: not-allowed;
+    }
+    
+    .target-results-table {
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>مدیریت ارزیابی و درجه‌بندی مشتریان</h1>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Section: Grade Mapping Form -->
+  <div class="section">
+    <div class="section-header">
+      <h2>
+        <i class="fas fa-chart-line"></i>
+        تعریف درجه (Grade Mapping)
+      </h2>
+      <div>
+        <a href="{{ url_for('admin_evaluate_csv') }}" class="btn btn-primary">
+          <i class="fas fa-file-excel"></i>
+          ارزیابی با CSV/Excel
+        </a>
+      </div>
+    </div>
+    
+    <form method="POST" action="{{ url_for('admin_quotas') }}">
+      {{ form.csrf_token }}
+      <div class="form-group">
+        <label for="grade_letter">درجه (مثلاً A+، A، B، B+ و غیره)</label>
+        <input type="text" name="grade_letter" id="grade_letter" placeholder="مثلاً A+"
+               value="{{ form.grade_letter.data if form.grade_letter.data else '' }}">
+      </div>
+      <div class="form-group">
+        <label for="min_score">حداقل نمره</label>
+        <input type="number" step="0.01" name="min_score" id="min_score" placeholder="مثلاً 90"
+               value="{{ form.min_score.data if form.min_score.data else '' }}">
+      </div>
+      <button type="submit" class="submit-btn">{{ form.submit.label.text }}</button>
+    </form>
+  </div>
+
+  <!-- Section: List of Defined Grade Mappings -->
+  <div class="section">
+    <h2>
+      <i class="fas fa-list"></i>
+      لیست درجات تعریف شده
+    </h2>
+    {% if grade_mappings %}
+      <table class="grade-table">
+        <thead>
+          <tr>
+            <th>درجه</th>
+            <th>حداقل نمره</th>
+            <th>عملیات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mapping in grade_mappings %}
+          <tr>
+            <td>
+              <span class="grade-badge 
+                {% if mapping.grade_letter[0] == 'A' %}grade-A
+                {% elif mapping.grade_letter[0] == 'B' %}grade-B
+                {% elif mapping.grade_letter[0] == 'C' %}grade-C
+                {% elif mapping.grade_letter[0] == 'D' %}grade-D
+                {% endif %}">
+                {{ mapping.grade_letter }}
+              </span>
+            </td>
+            <td>{{ mapping.min_score }}</td>
+            <td class="actions">
+              <a href="{{ url_for('edit_grade_mapping', mapping_id=mapping.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i>
+                ویرایش
+              </a>
+              <form method="POST" action="{{ url_for('delete_grade_mapping', mapping_id=mapping.id) }}" style="display: inline-block;" onsubmit="return confirm('آیا مطمئن هستید؟');">
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash"></i>
+                  حذف
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>هیچ درجه‌ای تعریف نشده است.</p>
+    {% endif %}
+  </div>
+  
+  <!-- Section: Target Setting -->
+  <div class="section">
+    <div class="section-header">
+      <h2>
+        <i class="fas fa-bullseye"></i>
+        تارگت زدن
+      </h2>
+      <div>
+        <a href="{{ url_for('admin_province_targets') }}" class="btn btn-primary">
+          <i class="fas fa-map-marked-alt"></i>
+          نمایش نقشه تارگت استان‌ها
+        </a>
+        <a href="{{ url_for('init_provinces') }}" class="btn btn-outline">
+          <i class="fas fa-database"></i>
+          راه‌اندازی اولیه استان‌ها
+        </a>
+      </div>
+    </div>
+    
+    <form method="POST" action="{{ url_for('admin_quotas') }}">
+      <input type="hidden" name="submit_target" value="1">
+      <div class="form-group">
+        <div class="checkbox-group">
+          <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <input type="checkbox" id="liter_enabled" name="liter_enabled" class="target-checkbox" style="margin-left: 0.5rem;">
+            <label for="liter_enabled">ظرفیت بر حسب لیتر</label>
+            <input type="number" step="any" id="liter_capacity" name="liter_capacity" class="target-input" style="margin-right: 1rem; width: 150px;" placeholder="مقدار کل لیتر">
+          </div>
+          
+          <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <input type="checkbox" id="shrink_enabled" name="shrink_enabled" class="target-checkbox" style="margin-left: 0.5rem;">
+            <label for="shrink_enabled">ظرفیت بر حسب شرینک</label>
+            <input type="number" step="any" id="shrink_capacity" name="shrink_capacity" class="target-input" style="margin-right: 1rem; width: 150px;" placeholder="مقدار کل شرینک">
+          </div>
+        </div>
+      </div>
+      
+      <button type="submit" class="submit-btn">محاسبه و ذخیره تارگت‌ها</button>
+    </form>
+    
+    {% if provinces and provinces|length > 0 and province_targets and province_targets|length > 0 %}
+    <div style="margin-top: 2rem;">
+      <h3 style="font-size: 1rem; margin-bottom: 1rem;">نتایج تخصیص تارگت بر اساس جمعیت استان‌ها</h3>
+      
+      <div class="target-results-table">
+        <table>
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>استان</th>
+              <th>جمعیت</th>
+              <th>درصد</th>
+              {% if province_targets and province_targets|length > 0 %}
+                {% set sample_target = province_targets.values()|list|first %}
+                {% if sample_target.liter_capacity is not none %}
+                  <th>ظرفیت لیتر</th>
+                {% endif %}
+                {% if sample_target.shrink_capacity is not none %}
+                  <th>ظرفیت شرینک</th>
+                {% endif %}
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% set total_population = provinces|sum(attribute='population') %}
+            {% for province in provinces %}
+              {% if loop.index <= 10 %}  <!-- Only show first 10 provinces in this view -->
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td>{{ province.name }}</td>
+                  <td>{{ "{:,}".format(province.population) }}</td>
+                  <td>
+                    {% set percentage = (province.population / total_population * 100)|round(2) %}
+                    {{ percentage }}%
+                  </td>
+                  {% if province.id in province_targets %}
+                    {% if sample_target.liter_capacity is not none %}
+                      <td>{{ "{:,.2f}".format(province_targets[province.id].liter_capacity) }}</td>
+                    {% endif %}
+                    {% if sample_target.shrink_capacity is not none %}
+                      <td>{{ "{:,.2f}".format(province_targets[province.id].shrink_capacity) }}</td>
+                    {% endif %}
+                  {% endif %}
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      {% if provinces|length > 10 %}
+        <div style="text-align: center; margin-top: 1rem;">
+          <a href="{{ url_for('admin_province_targets') }}" class="btn btn-outline">
+            مشاهده همه استان‌ها و نقشه کامل
+          </a>
+        </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  
+  <!-- Section: Batch Evaluations -->
+  <div class="section">
+    <h2>
+      <i class="fas fa-layer-group"></i>
+      ارزیابی‌های دسته‌ای (CSV/Excel)
+    </h2>
+    
+    {% if batch_evaluations %}
+      <div class="batch-cards">
+        {% for batch in batch_evaluations %}
+          {% set stats = batch_statistics.get(batch.batch_id, {}) %}
+          <div class="batch-card">
+            <div class="batch-header">
+              <div class="batch-title">دسته ارزیابی {{ loop.index }}</div>
+              <div class="batch-date">
+                {% if batch.evaluated_at is string %}
+                  {{ batch.evaluated_at }}
+                {% else %}
+                  {{ batch.evaluated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="batch-stats">
+              <div class="batch-stat">
+                <div class="stat-label">تعداد</div>
+                <div class="stat-value">{{ batch.count }}</div>
+              </div>
+              <div class="batch-stat">
+                <div class="stat-label">میانگین نمره</div>
+                <div class="stat-value">{{ stats.get('avg_score', 0) }}</div>
+              </div>
+            </div>
+            
+            <div class="batch-grades">
+              {% for grade, count in stats.get('grades', {}).items() %}
+                <div class="batch-grade-pill">
+                  <span class="grade-badge 
+                    {% if grade[0] == 'A' %}grade-A
+                    {% elif grade[0] == 'B' %}grade-B
+                    {% elif grade[0] == 'C' %}grade-C
+                    {% elif grade[0] == 'D' %}grade-D
+                    {% endif %}" style="margin-left: 0.25rem;">
+                    {{ grade }}
+                  </span>
+                  <span>{{ count }} مورد</span>
+                </div>
+              {% endfor %}
+            </div>
+            
+            <div class="batch-actions">
+              <a href="{{ url_for('view_batch_evaluations', batch_id=batch.batch_id) }}" class="btn btn-primary">
+                <i class="fas fa-eye"></i>
+                مشاهده جزئیات
+              </a>
+              <form method="POST" action="{{ url_for('delete_batch_evaluations', batch_id=batch.batch_id) }}" style="display: inline-block;" onsubmit="return confirm('آیا از حذف این دسته ارزیابی مطمئن هستید؟ این عمل قابل بازگشت نیست.');">
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash"></i>
+                  حذف
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>هیچ ارزیابی دسته‌ای انجام نشده است. برای انجام ارزیابی دسته‌ای، گزینه "ارزیابی با CSV/Excel" را انتخاب کنید.</p>
+    {% endif %}
+  </div>
+
+  <!-- Section: Customer List & Evaluations -->
+  <div class="section">
+    <h2>
+      <i class="fas fa-users"></i>
+      مدیریت مشتریان و ارزیابی دستی
+    </h2>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('customers-tab')">لیست مشتریان</div>
+      <div class="tab" onclick="showTab('evaluations-tab')">ارزیابی‌های انجام شده</div>
+    </div>
+
+    <div class="tab-content active" id="customers-tab">
+      <div class="search-box">
+        <input type="text" id="customerSearch" placeholder="جستجو بر اساس شماره یا نام مشتری...">
+      </div>
+      <div class="customer-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>شماره مشتری</th>
+              <th>نام مشتری</th>
+              <th>درجه فعلی</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="customerTableBody">
+            {% for customer in customers %}
+            <tr>
+              <td>{{ customer.number }}</td>
+              <td>{{ customer.name }}</td>
+              <td>
+                {% if customer.grade %}
+                <span class="grade-badge 
+                  {% if customer.grade[0] == 'A' %}grade-A
+                  {% elif customer.grade[0] == 'B' %}grade-B
+                  {% elif customer.grade[0] == 'C' %}grade-C
+                  {% elif customer.grade[0] == 'D' %}grade-D
+                  {% endif %}">
+                  {{ customer.grade }}
+                </span>
+                {% else %}
+                <span class="grade-badge">-</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ url_for('evaluate_customer', customer_id=customer.id) }}" class="eval-link">
+                  <i class="fas fa-chart-bar"></i>
+                  ارزیابی
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="evaluations-tab">
+      {% if evaluations %}
+        <table class="grade-table">
+          <thead>
+            <tr>
+              <th>شماره مشتری</th>
+              <th>نام مشتری</th>
+              <th>نمره کل</th>
+              <th>درجه</th>
+              <th>تاریخ ارزیابی</th>
+              <th>نوع ارزیابی</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for eval in evaluations %}
+            <tr>
+              <td>{{ eval.customer.number }}</td>
+              <td>{{ eval.customer.name }}</td>
+              <td>{{ eval.total_score }}</td>
+              <td>
+                <span class="grade-badge 
+                  {% if eval.assigned_grade[0] == 'A' %}grade-A
+                  {% elif eval.assigned_grade[0] == 'B' %}grade-B
+                  {% elif eval.assigned_grade[0] == 'C' %}grade-C
+                  {% elif eval.assigned_grade[0] == 'D' %}grade-D
+                  {% endif %}">
+                  {{ eval.assigned_grade }}
+                </span>
+              </td>
+              <td>{{ eval.evaluated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+              <td>{{ 'دستی' if eval.evaluation_method == 'manual' else 'CSV/Excel' }}</td>
+              <td class="actions">
+                <a href="{{ url_for('edit_evaluation', eval_id=eval.id) }}" class="btn btn-primary">
+                  <i class="fas fa-edit"></i>
+                  ویرایش
+                </a>
+                <form method="POST" action="{{ url_for('delete_evaluation', eval_id=eval.id) }}" style="display: inline-block;" onsubmit="return confirm('آیا از حذف این ارزیابی مطمئن هستید؟');">
+                  <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i>
+                    حذف
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>هیچ ارزیابی انجام نشده است.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    // JavaScript for filtering the customer table
+    const searchInput = document.getElementById('customerSearch');
+    const tableBody = document.getElementById('customerTableBody');
+    const rows = Array.from(tableBody?.getElementsByTagName('tr') || []);
+    
+    if (searchInput && tableBody) {
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        rows.forEach(row => {
+          const numberText = row.cells[0].textContent.toLowerCase();
+          const nameText = row.cells[1].textContent.toLowerCase();
+          if (numberText.includes(query) || nameText.includes(query)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    }
+    
+    // Tab functionality
+    function showTab(tabId) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show the selected tab content
+      document.getElementById(tabId).classList.add('active');
+      
+      // Update tab styling
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Highlight the clicked tab
+      const activeTabIndex = tabId === 'customers-tab' ? 0 : 1;
+      document.querySelectorAll('.tab')[activeTabIndex].classList.add('active');
+    }
+  </script>
+</body>
+</html>

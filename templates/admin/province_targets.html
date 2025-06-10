@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تخصیص استانی با درجه‌بندی مشتریان | پنل مدیریت</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Global Styles */
+    body {
+      background-color: #f1f5f9;
+      font-family: 'Vazirmatn', sans-serif;
+      padding: 2rem;
+      color: #1e293b;
+      direction: rtl;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.75rem;
+      color: #334155;
+    }
+    h2 {
+      font-size: 1.25rem;
+      color: #334155;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    /* Section styling */
+    .section {
+      background: #fff;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Map container */
+    #iran-map-container {
+      width: 100%;
+      height: 500px;
+      margin-bottom: 2rem;
+      position: relative;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    /* Color legend for map */
+    .color-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      padding: 0.75rem;
+      background: #f8fafc;
+      border-radius: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 0 1rem;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      margin-left: 0.5rem;
+      border-radius: 3px;
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: right;
+      font-size: 0.875rem;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    tr:hover td {
+      background-color: #f1f5f9;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background-color: #4f46e5;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background-color: #4338ca;
+    }
+    .btn-outline {
+      background-color: transparent;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-outline:hover {
+      background-color: #f8fafc;
+    }
+
+    /* Header actions */
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .tab {
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .tab:hover {
+      color: #4f46e5;
+    }
+    .tab.active {
+      color: #4f46e5;
+      border-bottom-color: #4f46e5;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Cards grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #334155;
+    }
+    .stat-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .stat-label {
+      min-width: 80px;
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+    .stat-value {
+      font-weight: 500;
+      color: #334155;
+    }
+
+    /* Grade distribution */
+    .grade-distribution {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .grade-pill {
+      background: #f1f5f9;
+      padding: 0.25rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    /* Grade badges */
+    .grade-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-weight: 500;
+      font-size: 0.75rem;
+      display: inline-block;
+      text-align: center;
+      min-width: 2rem;
+    }
+    .grade-A {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .grade-B {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .grade-C {
+      background-color: #fef9c3;
+      color: #854d0e;
+    }
+    .grade-D {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    .grade-none {
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+
+    /* Flash messages */
+    .flash {
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+    .success {
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      color: #166534;
+    }
+    .danger {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #b91c1c;
+    }
+    .warning {
+      background-color: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+    .info {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      color: #1e40af;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #475569;
+      font-size: 0.875rem;
+    }
+    .form-control {
+      width: 100%;
+      padding: 0.625rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+    .form-control:focus {
+      border-color: #4f46e5;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Weight input specific */
+    .weight-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+    }
+    .weight-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .weight-input {
+      width: 70px;
+      padding: 0.375rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.25rem;
+      text-align: center;
+    }
+
+    /* Customer allocation table */
+    .allocation-container {
+      margin-top: 1rem;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .allocation-table th {
+      font-size: 0.8125rem;
+    }
+    .allocation-value {
+      font-weight: 500;
+      text-align: center;
+    }
+
+    /* Province tooltip */
+    .province-tooltip {
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.9);
+      border: 1px solid #cbd5e1;
+      border-radius: 0.375rem;
+      padding: 0.75rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 100;
+      font-size: 0.875rem;
+      direction: rtl;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-actions">
+    <h1>تخصیص استانی با درجه‌بندی مشتریان</h1>
+    <div>
+      <a href="{{ url_for('admin_quotas') }}" class="btn btn-outline">
+        <i class="fas fa-arrow-right"></i>
+        بازگشت به صفحه سهمیه‌ها
+      </a>
+    </div>
+  </div>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="section">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('overview-tab')">نمای کلی استان‌ها</div>
+      <div class="tab" onclick="showTab('weights-tab')">تنظیم وزن‌های درجه‌بندی</div>
+      <div class="tab" onclick="showTab('allocation-tab')">تخصیص بر اساس مشتری</div>
+      <div class="tab" onclick="showTab('map-tab')">نقشه توزیع</div>
+    </div>
+
+    <!-- Tab 1: Overview -->
+    <div class="tab-content active" id="overview-tab">
+      <h2>
+        <i class="fas fa-chart-pie" style="color: #4f46e5;"></i>
+        توزیع مشتریان بر اساس استان و درجه‌بندی
+      </h2>
+
+      <div class="cards-grid">
+        {% for province in provinces %}
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">{{ province.name }}</div>
+              <div>
+                {% set customer_count = customers_by_province.get(province.id, [])|length %}
+                <span class="grade-pill">{{ customer_count }} مشتری</span>
+              </div>
+            </div>
+
+            <div class="stat-container">
+              <div class="stat-label">جمعیت:</div>
+              <div class="stat-value">{{ "{:,}".format(province.population) }}</div>
+            </div>
+
+            {% if province.id in province_targets %}
+              {% set target = province_targets[province.id] %}
+              {% if target.liter_capacity is not none %}
+                <div class="stat-container">
+                  <div class="stat-label">ظرفیت لیتر:</div>
+                  <div class="stat-value">{{ "{:,.2f}".format(target.liter_capacity) }}</div>
+                </div>
+              {% endif %}
+
+              {% if target.shrink_capacity is not none %}
+                <div class="stat-container">
+                  <div class="stat-label">ظرفیت شرینک:</div>
+                  <div class="stat-value">{{ "{:,.2f}".format(target.shrink_capacity) }}</div>
+                </div>
+              {% endif %}
+            {% endif %}
+
+            {% if province.id in customer_grades_by_province %}
+              <div class="grade-distribution">
+                {% for grade, count in customer_grades_by_province[province.id].items() %}
+                  {% if count > 0 %}
+                    <div class="grade-pill">
+                      <span class="grade-badge
+                        {% if grade[0] == 'A' %}grade-A
+                        {% elif grade[0] == 'B' %}grade-B
+                        {% elif grade[0] == 'C' %}grade-C
+                        {% elif grade[0] == 'D' %}grade-D
+                        {% else %}grade-none
+                        {% endif %}">
+                        {{ grade }}
+                      </span>
+                      <span>{{ count }}</span>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Tab 2: Grade Weights -->
+    <div class="tab-content" id="weights-tab">
+      <h2>
+        <i class="fas fa-balance-scale" style="color: #4f46e5;"></i>
+        تنظیم وزن‌های درجه‌بندی برای تخصیص
+      </h2>
+
+      <p>در این بخش می‌توانید وزن هر درجه را برای تخصیص مقدار بیشتر به مشتریان با درجه بالاتر تنظیم کنید.</p>
+
+      <form method="POST" action="{{ url_for('update_grade_weights') }}">
+        <table class="weight-table">
+          <thead>
+            <tr>
+              <th>درجه</th>
+              <th>حداقل نمره</th>
+              <th>وزن تخصیص</th>
+              <th>توضیح</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mapping in grade_mappings %}
+              <tr>
+                <td>
+                  <span class="grade-badge
+                    {% if mapping.grade_letter[0] == 'A' %}grade-A
+                    {% elif mapping.grade_letter[0] == 'B' %}grade-B
+                    {% elif mapping.grade_letter[0] == 'C' %}grade-C
+                    {% elif mapping.grade_letter[0] == 'D' %}grade-D
+                    {% endif %}">
+                    {{ mapping.grade_letter }}
+                  </span>
+                </td>
+                <td>{{ mapping.min_score }}</td>
+                <td class="weight-cell">
+                  <input type="number" name="weight_{{ mapping.grade_letter }}" class="weight-input"
+                         step="0.1" min="0.1" max="10" value="{{ grade_weights.get(mapping.grade_letter, 1) }}">
+                  <span>برابر</span>
+                </td>
+                <td>مشتریان با درجه {{ mapping.grade_letter }} به میزان مشخص شده بیشتر/کمتر از متوسط دریافت می‌کنند</td>
+              </tr>
+            {% endfor %}
+            <tr>
+              <td>
+                <span class="grade-badge grade-none">بدون درجه</span>
+              </td>
+              <td>-</td>
+              <td class="weight-cell">
+                <input type="number" name="weight_بدون درجه" class="weight-input"
+                       step="0.1" min="0.1" max="10" value="{{ grade_weights.get('بدون درجه', 0.5) }}">
+                <span>برابر</span>
+              </td>
+              <td>مشتریان بدون درجه‌بندی</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i>
+          ذخیره وزن‌ها
+        </button>
+      </form>
+    </div>
+
+    <!-- Tab 3: Customer Allocation -->
+    <div class="tab-content" id="allocation-tab">
+      <h2>
+        <i class="fas fa-sitemap" style="color: #4f46e5;"></i>
+        تخصیص بر اساس درجه مشتری
+      </h2>
+
+      <p>در این جدول می‌توانید سهمیه تخصیص‌داده شده به هر مشتری براساس استان و درجه‌بندی را مشاهده کنید.</p>
+
+      <div class="table-container allocation-container">
+        <table class="allocation-table">
+          <thead>
+            <tr>
+              <th>استان</th>
+              <th>تعداد کل مشتریان</th>
+              <th>درجه</th>
+              <th>تعداد مشتریان</th>
+              {% if has_liter %}
+                <th>تخصیص لیتر هر مشتری</th>
+                <th>مجموع لیتر این گروه</th>
+              {% endif %}
+              {% if has_shrink %}
+                <th>تخصیص شرینک هر مشتری</th>
+                <th>مجموع شرینک این گروه</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for province in provinces %}
+              {% if province.id in allocation_by_province_and_grade %}
+                {% set allocation_by_grade = allocation_by_province_and_grade[province.id] %}
+                {% set total_customers = customers_by_province.get(province.id, [])|length %}
+                {% set grades = allocation_by_grade.keys()|list %}
+
+                {% for grade in grades %}
+                  {% if allocation_by_grade[grade].count > 0 %}
+                    <tr>
+                      {% if loop.first %}
+                        <td rowspan="{{ grades|length }}">{{ province.name }}</td>
+                        <td rowspan="{{ grades|length }}">{{ total_customers }}</td>
+                      {% endif %}
+                      <td>
+                        <span class="grade-badge
+                          {% if grade[0] == 'A' %}grade-A
+                          {% elif grade[0] == 'B' %}grade-B
+                          {% elif grade[0] == 'C' %}grade-C
+                          {% elif grade[0] == 'D' %}grade-D
+                          {% else %}grade-none
+                          {% endif %}">
+                          {{ grade }}
+                        </span>
+                      </td>
+                      <td>{{ allocation_by_grade[grade].count }}</td>
+
+                      {% if has_liter %}
+                        <td class="allocation-value">
+                          {% if allocation_by_grade[grade].liter is not none %}
+                            {{ "{:,.2f}".format(allocation_by_grade[grade].liter) }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                        <td class="allocation-value">
+                          {% if allocation_by_grade[grade].liter is not none %}
+                            {{ "{:,.2f}".format(allocation_by_grade[grade].liter * allocation_by_grade[grade].count) }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                      {% endif %}
+
+                      {% if has_shrink %}
+                        <td class="allocation-value">
+                          {% if allocation_by_grade[grade].shrink is not none %}
+                            {{ "{:,.2f}".format(allocation_by_grade[grade].shrink) }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                        <td class="allocation-value">
+                          {% if allocation_by_grade[grade].shrink is not none %}
+                            {{ "{:,.2f}".format(allocation_by_grade[grade].shrink * allocation_by_grade[grade].count) }}
+                          {% else %}
+                            -
+                          {% endif %}
+                        </td>
+                      {% endif %}
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Map View -->
+    <div class="tab-content" id="map-tab">
+      <h2>
+        <i class="fas fa-map-marked-alt" style="color: #4f46e5;"></i>
+        نقشه تارگت استان‌ها
+      </h2>
+
+      <!-- Color legend -->
+      <div class="color-legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #dbeafe;"></div>
+          <span>کمترین درصد</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #93c5fd;"></div>
+          <span>درصد متوسط</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #3b82f6;"></div>
+          <span>درصد بالا</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #1e40af;"></div>
+          <span>بیشترین درصد</span>
+        </div>
+      </div>
+
+      <!-- Map container -->
+      <div id="iran-map-container">
+        <!-- SVG map will be rendered here via JavaScript -->
+      </div>
+
+      <!-- Table of results -->
+      <h2>
+        <i class="fas fa-table" style="color: #4f46e5;"></i>
+        جدول تارگت استان‌ها
+      </h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>استان</th>
+              <th>جمعیت</th>
+              <th>تعداد مشتری</th>
+              <th>درصد از کل</th>
+              {% if has_liter %}
+                <th>ظرفیت لیتر</th>
+                <th>تخصیص به هر مشتری</th>
+              {% endif %}
+              {% if has_shrink %}
+                <th>ظرفیت شرینک</th>
+                <th>تخصیص به هر مشتری</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% set total_population = provinces|sum(attribute='population') %}
+            {% for province in provinces %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ province.name }}</td>
+                <td>{{ "{:,}".format(province.population) }}</td>
+                <td>{{ customers_by_province.get(province.id, [])|length }}</td>
+                <td>
+                  {% set percentage = (province.population / total_population * 100)|round(2) %}
+                  {{ percentage }}%
+                </td>
+                {% if has_liter and province.id in province_targets and province_targets[province.id].liter_capacity is not none %}
+                  <td>{{ "{:,.2f}".format(province_targets[province.id].liter_capacity) }}</td>
+                  {% set customer_count = customers_by_province.get(province.id, [])|length %}
+                  <td>
+                    {% if customer_count > 0 %}
+                      {{ "{:,.2f}".format(province_targets[province.id].liter_capacity / customer_count) }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                {% elif has_liter %}
+                  <td>-</td>
+                  <td>-</td>
+                {% endif %}
+                {% if has_shrink and province.id in province_targets and province_targets[province.id].shrink_capacity is not none %}
+                  <td>{{ "{:,.2f}".format(province_targets[province.id].shrink_capacity) }}</td>
+                  {% set customer_count = customers_by_province.get(province.id, [])|length %}
+                  <td>
+                    {% if customer_count > 0 %}
+                      {{ "{:,.2f}".format(province_targets[province.id].shrink_capacity / customer_count) }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                {% elif has_shrink %}
+                  <td>-</td>
+                  <td>-</td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tab functionality
+      function showTab(tabId) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(tab => {
+          tab.classList.remove('active');
+        });
+
+        // Show the selected tab content
+        document.getElementById(tabId).classList.add('active');
+
+        // Update tab styling
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+
+        // Find and activate the tab that was clicked
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const tabIndex = ['overview-tab', 'weights-tab', 'allocation-tab', 'map-tab'].indexOf(tabId);
+        if (tabIndex >= 0 && tabIndex < tabs.length) {
+          tabs[tabIndex].classList.add('active');
+        }
+      }
+
+      // Make the showTab function global
+      window.showTab = showTab;
+
+      // SVG map of Iran with provinces
+      const iranMapSvg = `
+        <svg id="iran-map" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+          <path id="tehran" d="M400 200 L420 180 L440 190 L430 210 L410 215 Z" />
+          <path id="isfahan" d="M380 250 L420 230 L450 260 L420 290 L370 270 Z" />
+          <path id="khorasan-razavi" d="M550 150 L580 130 L620 170 L590 200 L540 190 Z" />
+          <path id="fars" d="M400 320 L430 300 L470 320 L450 350 L410 360 Z" />
+          <path id="khuzestan" d="M300 300 L340 280 L370 310 L350 340 L310 330 Z" />
+          <path id="east-azerbaijan" d="M250 100 L290 80 L310 110 L280 130 L240 120 Z" />
+          <path id="mazandaran" d="M420 120 L450 100 L480 120 L460 140 L430 135 Z" />
+          <path id="west-azerbaijan" d="M180 120 L220 100 L240 130 L210 150 L170 140 Z" />
+          <path id="kerman" d="M500 300 L540 280 L570 310 L550 340 L510 350 Z" />
+          <path id="sistan-baluchistan" d="M600 300 L640 280 L680 310 L650 350 L610 350 Z" />
+          <path id="alborz" d="M380 170 L400 150 L420 170 L410 190 L370 185 Z" />
+          <path id="gilan" d="M320 130 L350 110 L370 140 L350 160 L320 155 Z" />
+          <path id="kermanshah" d="M220 220 L250 200 L270 230 L250 250 L220 245 Z" />
+          <path id="lorestan" d="M270 250 L300 230 L320 260 L300 280 L270 275 Z" />
+          <path id="hamadan" d="M270 200 L300 180 L320 210 L300 230 L270 225 Z" />
+          <path id="golestan" d="M480 140 L510 120 L530 150 L510 170 L480 165 Z" />
+          <path id="kurdistan" d="M220 180 L250 160 L270 190 L250 210 L220 205 Z" />
+          <path id="hormozgan" d="M450 380 L490 360 L520 390 L500 410 L460 405 Z" />
+          <path id="markazi" d="M320 210 L350 190 L370 220 L350 240 L320 235 Z" />
+          <path id="ardabil" d="M280 70 L310 50 L330 80 L310 100 L280 95 Z" />
+          <path id="qazvin" d="M350 160 L380 140 L400 170 L380 190 L350 185 Z" />
+          <path id="qom" d="M370 210 L400 190 L420 220 L400 240 L370 235 Z" />
+          <path id="yazd" d="M450 280 L480 260 L500 290 L480 310 L450 305 Z" />
+          <path id="zanjan" d="M300 140 L330 120 L350 150 L330 170 L300 165 Z" />
+          <path id="bushehr" d="M330 350 L360 330 L380 360 L360 380 L330 375 Z" />
+          <path id="chaharmahal" d="M350 270 L380 250 L400 280 L380 300 L350 295 Z" />
+          <path id="north-khorasan" d="M500 100 L530 80 L550 110 L530 130 L500 125 Z" />
+          <path id="kohgiluyeh" d="M360 320 L390 300 L410 330 L390 350 L360 345 Z" />
+          <path id="south-khorasan" d="M540 220 L570 200 L590 230 L570 250 L540 245 Z" />
+          <path id="semnan" d="M460 180 L490 160 L510 190 L490 210 L460 205 Z" />
+          <path id="ilam" d="M240 270 L270 250 L290 280 L270 300 L240 295 Z" />
+          <!-- Add province names -->
+          <text x="405" y="200" font-size="8">تهران</text>
+          <text x="410" y="260" font-size="8">اصفهان</text>
+          <text x="570" y="170" font-size="8">خراسان رضوی</text>
+          <text x="430" y="330" font-size="8">فارس</text>
+          <text x="330" y="310" font-size="8">خوزستان</text>
+          <text x="270" y="110" font-size="8">آذربایجان شرقی</text>
+          <text x="445" y="125" font-size="8">مازندران</text>
+          <text x="200" y="130" font-size="8">آذربایجان غربی</text>
+          <text x="530" y="310" font-size="8">کرمان</text>
+          <text x="640" y="310" font-size="8">سیستان و بلوچستان</text>
+          <text x="385" y="170" font-size="8">البرز</text>
+          <text x="335" y="140" font-size="8">گیلان</text>
+          <text x="235" y="230" font-size="8">کرمانشاه</text>
+          <text x="285" y="260" font-size="8">لرستان</text>
+          <text x="285" y="210" font-size="8">همدان</text>
+          <text x="495" y="150" font-size="8">گلستان</text>
+          <text x="235" y="190" font-size="8">کردستان</text>
+          <text x="480" y="390" font-size="8">هرمزگان</text>
+          <text x="335" y="220" font-size="8">مرکزی</text>
+          <text x="295" y="80" font-size="8">اردبیل</text>
+          <text x="365" y="170" font-size="8">قزوین</text>
+          <text x="385" y="220" font-size="8">قم</text>
+          <text x="475" y="290" font-size="8">یزد</text>
+          <text x="315" y="150" font-size="8">زنجان</text>
+          <text x="345" y="360" font-size="8">بوشهر</text>
+          <text x="375" y="280" font-size="8">چهارمحال</text>
+          <text x="515" y="115" font-size="8">خراسان شمالی</text>
+          <text x="375" y="330" font-size="8">کهگیلویه</text>
+          <text x="555" y="230" font-size="8">خراسان جنوبی</text>
+          <text x="475" y="195" font-size="8">سمنان</text>
+          <text x="255" y="280" font-size="8">ایلام</text>
+        </svg>
+      `;
+
+      // Insert the SVG into the container
+      const mapContainer = document.getElementById('iran-map-container');
+      if (mapContainer) {
+        mapContainer.innerHTML = iranMapSvg;
+
+        // Get all provinces in the SVG
+        const provincePaths = document.querySelectorAll('#iran-map path');
+
+        // Set default styling
+        provincePaths.forEach(path => {
+          path.setAttribute('fill', '#e2e8f0');
+          path.setAttribute('stroke', '#1e293b');
+          path.setAttribute('stroke-width', '1');
+        });
+
+        // Initialize tooltips data
+        {% if provinces and province_targets and province_targets|length > 0 %}
+          const provinceData = {
+            // Map simplified province names to their full names
+            'tehran': '{{ provinces|selectattr("name", "equalto", "تهران")|map(attribute="id")|first }}',
+            'isfahan': '{{ provinces|selectattr("name", "equalto", "اصفهان")|map(attribute="id")|first }}',
+            'khorasan-razavi': '{{ provinces|selectattr("name", "equalto", "خراسان رضوی")|map(attribute="id")|first }}',
+            'fars': '{{ provinces|selectattr("name", "equalto", "فارس")|map(attribute="id")|first }}',
+            'khuzestan': '{{ provinces|selectattr("name", "equalto", "خوزستان")|map(attribute="id")|first }}',
+            'east-azerbaijan': '{{ provinces|selectattr("name", "equalto", "آذربایجان شرقی")|map(attribute="id")|first }}',
+            'mazandaran': '{{ provinces|selectattr("name", "equalto", "مازندران")|map(attribute="id")|first }}',
+            'west-azerbaijan': '{{ provinces|selectattr("name", "equalto", "آذربایجان غربی")|map(attribute="id")|first }}',
+            'kerman': '{{ provinces|selectattr("name", "equalto", "کرمان")|map(attribute="id")|first }}',
+            'sistan-baluchistan': '{{ provinces|selectattr("name", "equalto", "سیستان و بلوچستان")|map(attribute="id")|first }}',
+            'alborz': '{{ provinces|selectattr("name", "equalto", "البرز")|map(attribute="id")|first }}',
+            'gilan': '{{ provinces|selectattr("name", "equalto", "گیلان")|map(attribute="id")|first }}',
+            'kermanshah': '{{ provinces|selectattr("name", "equalto", "کرمانشاه")|map(attribute="id")|first }}',
+            'lorestan': '{{ provinces|selectattr("name", "equalto", "لرستان")|map(attribute="id")|first }}',
+            'hamadan': '{{ provinces|selectattr("name", "equalto", "همدان")|map(attribute="id")|first }}',
+            'golestan': '{{ provinces|selectattr("name", "equalto", "گلستان")|map(attribute="id")|first }}',
+            'kurdistan': '{{ provinces|selectattr("name", "equalto", "کردستان")|map(attribute="id")|first }}',
+            'hormozgan': '{{ provinces|selectattr("name", "equalto", "هرمزگان")|map(attribute="id")|first }}',
+            'markazi': '{{ provinces|selectattr("name", "equalto", "مرکزی")|map(attribute="id")|first }}',
+            'ardabil': '{{ provinces|selectattr("name", "equalto", "اردبیل")|map(attribute="id")|first }}',
+            'qazvin': '{{ provinces|selectattr("name", "equalto", "قزوین")|map(attribute="id")|first }}',
+            'qom': '{{ provinces|selectattr("name", "equalto", "قم")|map(attribute="id")|first }}',
+            'yazd': '{{ provinces|selectattr("name", "equalto", "یزد")|map(attribute="id")|first }}',
+            'zanjan': '{{ provinces|selectattr("name", "equalto", "زنجان")|map(attribute="id")|first }}',
+            'bushehr': '{{ provinces|selectattr("name", "equalto", "بوشهر")|map(attribute="id")|first }}',
+            'chaharmahal': '{{ provinces|selectattr("name", "equalto", "چهارمحال و بختیاری")|map(attribute="id")|first }}',
+            'north-khorasan': '{{ provinces|selectattr("name", "equalto", "خراسان شمالی")|map(attribute="id")|first }}',
+            'kohgiluyeh': '{{ provinces|selectattr("name", "equalto", "کهگیلویه و بویراحمد")|map(attribute="id")|first }}',
+            'south-khorasan': '{{ provinces|selectattr("name", "equalto", "خراسان جنوبی")|map(attribute="id")|first }}',
+            'semnan': '{{ provinces|selectattr("name", "equalto", "سمنان")|map(attribute="id")|first }}',
+            'ilam': '{{ provinces|selectattr("name", "equalto", "ایلام")|map(attribute="id")|first }}'
+          };
+
+          // Function to map percentages to colors (from light to dark blue)
+          function getColor(percentage) {
+            // Scale from light blue (#dbeafe) to dark blue (#1e40af) based on percentage
+            if (!percentage) return '#e2e8f0'; // Default gray for no data
+
+            // Convert percentage (0-100) to a value between 0 and 1
+            const value = percentage / 100;
+
+            // Color components
+            const r = Math.round(219 - (value * (219 - 30)));
+            const g = Math.round(234 - (value * (234 - 64)));
+            const b = Math.round(254 - (value * (254 - 175)));
+
+            return `rgb(${r}, ${g}, ${b})`;
+          }
+
+          // Calculate the number of customers per province for coloring
+          const customersPerProvince = {};
+          {% for province in provinces %}
+          customersPerProvince['{{ province.id }}'] = {{ customers_by_province.get(province.id, [])|length }};
+          {% endfor %}
+
+          // Get the total number of customers across all provinces
+          const totalCustomers = Object.values(customersPerProvince).reduce((sum, count) => sum + count, 0);
+
+          // Apply coloring based on customer count and set up tooltips
+          provincePaths.forEach(path => {
+            const provinceId = path.id;
+            const provinceDbId = provinceData[provinceId];
+
+            if (provinceDbId) {
+              // Find the province and its target
+              {% for province in provinces %}
+                if (provinceDbId == '{{ province.id }}') {
+                  // Get province details
+                  const provinceName = '{{ province.name }}';
+                  const population = {{ province.population }};
+                  const totalPopulation = {{ total_population }};
+                  const percentage = (population / totalPopulation * 100).toFixed(2);
+
+                  // Get customer count
+                  const customerCount = customersPerProvince['{{ province.id }}'] || 0;
+                  const customerPercentage = totalCustomers > 0 ? (customerCount / totalCustomers * 100).toFixed(2) : 0;
+
+                  // Apply color based on customer percentage
+                  path.setAttribute('fill', getColor(customerPercentage));
+
+                  {% if province.id in province_targets %}
+                    {% if province_targets[province.id].liter_percentage is not none %}
+                      const literPercentage = {{ province_targets[province.id].liter_percentage }};
+                      const literCapacity = {{ province_targets[province.id].liter_capacity }};
+                    {% endif %}
+
+                    {% if province_targets[province.id].shrink_percentage is not none %}
+                      const shrinkPercentage = {{ province_targets[province.id].shrink_percentage }};
+                      const shrinkCapacity = {{ province_targets[province.id].shrink_capacity }};
+                    {% endif %}
+
+                    // Set tooltip data attributes
+                    path.setAttribute('data-name', provinceName);
+                    path.setAttribute('data-population', population.toLocaleString());
+                    path.setAttribute('data-percentage', percentage + '%');
+                    path.setAttribute('data-customers', customerCount);
+                    path.setAttribute('data-customer-percentage', customerPercentage + '%');
+
+                    {% if province_targets[province.id].liter_capacity is not none %}
+                      path.setAttribute('data-liter', {{ province_targets[province.id].liter_capacity }}.toFixed(2));
+                    {% endif %}
+
+                    {% if province_targets[province.id].shrink_capacity is not none %}
+                      path.setAttribute('data-shrink', {{ province_targets[province.id].shrink_capacity }}.toFixed(2));
+                    {% endif %}
+                  {% endif %}
+                }
+              {% endfor %}
+            }
+
+            // Add hover effects and tooltip
+            path.addEventListener('mouseover', function(e) {
+              this.setAttribute('stroke-width', '2');
+              this.setAttribute('stroke', '#1e40af');
+
+              if (this.hasAttribute('data-name')) {
+                // Show tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'province-tooltip';
+                tooltip.style.position = 'absolute';
+                tooltip.style.left = (e.pageX + 10) + 'px';
+                tooltip.style.top = (e.pageY + 10) + 'px';
+                tooltip.style.zIndex = '100';
+
+                let tooltipContent = `
+                  <div><strong>${this.getAttribute('data-name')}</strong></div>
+                  <div>جمعیت: ${this.getAttribute('data-population')}</div>
+                  <div>مشتریان: ${this.getAttribute('data-customers') || 0}</div>
+                `;
+
+                if (this.hasAttribute('data-liter')) {
+                  tooltipContent += `<div>ظرفیت لیتر: ${this.getAttribute('data-liter')}</div>`;
+
+                  // Calculate per customer if there are customers
+                  const customers = parseInt(this.getAttribute('data-customers') || '0');
+                  const literCapacity = parseFloat(this.getAttribute('data-liter'));
+                  if (customers > 0) {
+                    const perCustomer = (literCapacity / customers).toFixed(2);
+                    tooltipContent += `<div>سهم هر مشتری: ${perCustomer} لیتر</div>`;
+                  }
+                }
+
+                if (this.hasAttribute('data-shrink')) {
+                  tooltipContent += `<div>ظرفیت شرینک: ${this.getAttribute('data-shrink')}</div>`;
+
+                  // Calculate per customer if there are customers
+                  const customers = parseInt(this.getAttribute('data-customers') || '0');
+                  const shrinkCapacity = parseFloat(this.getAttribute('data-shrink'));
+                  if (customers > 0) {
+                    const perCustomer = (shrinkCapacity / customers).toFixed(2);
+                    tooltipContent += `<div>سهم هر مشتری: ${perCustomer} شرینک</div>`;
+                  }
+                }
+
+                tooltip.innerHTML = tooltipContent;
+                document.body.appendChild(tooltip);
+                this.tooltip = tooltip;
+              }
+            });
+
+            path.addEventListener('mousemove', function(e) {
+              if (this.tooltip) {
+                this.tooltip.style.left = (e.pageX + 10) + 'px';
+                this.tooltip.style.top = (e.pageY + 10) + 'px';
+              }
+            });
+
+            path.addEventListener('mouseout', function() {
+              this.setAttribute('stroke-width', '1');
+              this.setAttribute('stroke', '#1e293b');
+
+              // Remove tooltip
+              if (this.tooltip) {
+                document.body.removeChild(this.tooltip);
+                this.tooltip = null;
+              }
+            });
+          });
+        {% endif %}
+      }
+    });
+  </script>
+</body>
+</html>
+

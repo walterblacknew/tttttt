@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نقشه مسیر | پنل بازاریاب</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Vazirmatn', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        #map {
+            flex-grow: 1;
+            width: 100%;
+            height: calc(100vh - 60px);
+            z-index: 1;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            border: none;
+            background: #22c55e;
+            color: white;
+            cursor: pointer;
+        }
+
+        .point-marker {
+            background-color: #22c55e;
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            line-height: 24px;
+        }
+
+        .location-marker {
+            background-color: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+
+        .notification {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fffbeb;
+            color: #f59e0b;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 999;
+            display: none;
+        }
+
+        .action-btn {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.75rem 1.25rem;
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .reason-options {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .reason-options input {
+            margin-right: 0.5rem;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <button class="btn" onclick="refreshPoints()">بارگیری نقاط</button>
+            <button class="btn" onclick="getCurrentLocation()">موقعیت من</button>
+            <button class="btn" onclick="window.location.href='{{ url_for('marketer_index') }}'">بازگشت</button>
+        </div>
+    </div>
+
+    <div id="map"></div>
+    
+    <!-- Notification for proximity -->
+    <div class="notification" id="proximityNotification">
+        <span id="notificationText"></span>
+        <button onclick="dismissNotification()">بستن</button>
+    </div>
+
+    <!-- Action button for stopping at a store -->
+    <button class="action-btn" id="sellOperationBtn" onclick="startSellingOperation()">انجام عملیات فروش</button>
+
+    <!-- Reason options for not visiting -->
+    <div class="reason-options" id="reasonOptions">
+        <label>علت عدم مراجعه به فروشگاه:</label>
+        <input type="radio" name="reason" value="closed"> فروشگاه بسته بود
+        <input type="radio" name="reason" value="traffic"> مشکل ترافیکی
+        <input type="radio" name="reason" value="other"> سایر
+        <input type="text" id="otherReason" placeholder="لطفاً بنویسید" style="display:none;">
+        <button onclick="submitReason()">ارسال</button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map, currentLocationMarker;
+        let markers = [];
+        let sellOperationStarted = false;
+        let currentStore;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([35.6892, 51.3890], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            loadPoints();
+        }
+
+        // Load points from server
+        async function loadPoints() {
+            try {
+                const response = await fetch('{{ url_for('get_marketer_assigned_routes') }}');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const routes = await response.json();
+                clearMarkers();
+
+                let allPoints = [];
+                routes.forEach(route => {
+                    route.points.forEach(point => {
+                        allPoints.push({
+                            ...point,
+                            routeName: route.name
+                        });
+                    });
+                });
+
+                displayPoints(allPoints);
+            } catch (error) {
+                alert('خطا در بارگیری نقاط');
+            }
+        }
+
+        // Display points on map
+        function displayPoints(points) {
+            const bounds = L.latLngBounds();
+
+            points.forEach((point, index) => {
+                const marker = L.marker([point.lat, point.lng], {
+                    icon: L.divIcon({
+                        className: 'point-marker',
+                        html: `${index + 1}`,
+                        iconSize: [24, 24]
+                    })
+                });
+
+                marker.bindPopup(`
+                    <strong>${point.name}</strong><br>
+                    ${point.address || ''}<br>
+                    مسیر: ${point.routeName}
+                `);
+
+                marker.addTo(map);
+                markers.push(marker);
+                bounds.extend([point.lat, point.lng]);
+            });
+
+            if (markers.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // Clear all markers
+        function clearMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        // Refresh points
+        function refreshPoints() {
+            loadPoints();
+        }
+
+        // Get current location
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert('مرورگر شما از موقعیت‌یابی پشتیبانی نمی‌کند');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    const { latitude, longitude } = position.coords;
+
+                    if (currentLocationMarker) {
+                        map.removeLayer(currentLocationMarker);
+                    }
+
+                    currentLocationMarker = L.marker([latitude, longitude], {
+                        icon: L.divIcon({
+                            className: 'location-marker',
+                            iconSize: [16, 16]
+                        })
+                    }).addTo(map);
+
+                    map.setView([latitude, longitude], 15);
+                    checkProximity(latitude, longitude);
+                },
+                error => {
+                    alert('خطا در دریافت موقعیت مکانی');
+                }
+            );
+        }
+
+        // Check proximity to store
+        function checkProximity(lat, lng) {
+            markers.forEach(marker => {
+                const distance = map.distance([lat, lng], marker.getLatLng());
+
+                if (distance < 100) {
+                    showProximityNotification(marker);
+                }
+            });
+        }
+
+        // Show proximity notification
+        function showProximityNotification(marker) {
+            const notificationText = `شما به فروشگاه ${marker.getPopup().getContent()} نزدیک هستید`;
+            document.getElementById('notificationText').innerText = notificationText;
+            document.getElementById('proximityNotification').style.display = 'block';
+            currentStore = marker;
+        }
+
+        // Dismiss notification
+        function dismissNotification() {
+            document.getElementById('proximityNotification').style.display = 'none';
+            showReasonOptions();
+        }
+
+        // Show reason options if not visiting
+        function showReasonOptions() {
+            document.getElementById('reasonOptions').style.display = 'block';
+        }
+
+        // Submit reason for not visiting
+        function submitReason() {
+            const reason = document.querySelector('input[name="reason"]:checked');
+            const otherReason = document.getElementById('otherReason').value;
+
+            if (reason && (reason.value !== 'other' || otherReason)) {
+                alert(`علت عدم مراجعه: ${reason.value === 'other' ? otherReason : reason.value}`);
+                // You can send this data to the server for further processing
+                document.getElementById('reasonOptions').style.display = 'none';
+            } else {
+                alert('لطفاً یک علت انتخاب کنید');
+            }
+        }
+
+        // Start selling operation
+        function startSellingOperation() {
+            if (!sellOperationStarted) {
+                sellOperationStarted = true;
+                alert('عملیات فروش آغاز شد');
+                // Start a timer or calculate the time spent in the store
+                document.getElementById('sellOperationBtn').innerText = 'اتمام عملیات فروش';
+                document.getElementById('sellOperationBtn').classList.remove('loading');
+                document.getElementById('sellOperationBtn').onclick = endSellingOperation;
+            }
+        }
+
+        // End selling operation
+        function endSellingOperation() {
+            alert('عملیات فروش پایان یافت');
+            // Here, you can implement uploading of the invoice, etc.
+        }
+
+        // Initialize map
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>

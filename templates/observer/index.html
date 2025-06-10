@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <!-- IMPORTANT for mobile scaling/responsiveness -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پنل ناظر | داشبورد نظارت</title>
+  <!-- فونت وزیر -->
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+  <!-- Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #7c3aed;
+      --primary-hover: #6d28d9;
+      --secondary-color: #64748b;
+      --success-color: #22c55e;
+      --danger-color: #ef4444;
+      --warning-color: #f97316;
+      --background-color: #f1f5f9;
+      --card-background: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Vazirmatn', sans-serif;
+    }
+
+    body {
+      background-color: var(--background-color);
+      color: var(--text-primary);
+      line-height: 1.5;
+      /* Prevent body from scrolling horizontally if sidebar is out of view */
+      overflow-x: hidden;
+    }
+
+    /* Layout */
+    .dashboard {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background-color: var(--card-background);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      z-index: 10; /* So it appears over main content on mobile */
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .sidebar-menu {
+      padding: 1.5rem 1rem;
+      flex: 1;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: var(--text-secondary);
+      border-radius: 0.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+    }
+
+    .menu-item:hover {
+      background-color: #f8fafc;
+      color: var(--primary-color);
+    }
+
+    .menu-item.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .menu-item i {
+      margin-left: 0.75rem;
+    }
+
+    .menu-label {
+      font-weight: 500;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-right: 280px; /* Enough space for the sidebar */
+      padding: 2rem;
+      width: calc(100% - 280px);
+    }
+
+    /* Header */
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 1.875rem;
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    /* Map Section */
+    .map-section {
+      background: var(--card-background);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .map-placeholder {
+      background: #f8fafc;
+      height: 400px;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--card-background);
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .stat-title {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f9ff;
+      color: var(--primary-color);
+    }
+
+    .stat-value {
+      font-size: 1.875rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-trend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .trend-positive {
+      color: var(--success-color);
+    }
+
+    .trend-negative {
+      color: var(--danger-color);
+    }
+
+    /* Tracking List */
+    .tracking-list {
+      background: var(--card-background);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 2rem;
+    }
+
+    .tracking-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .list-filters {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .tracking-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .tracking-item:last-child {
+      border-bottom: none;
+    }
+
+    .tracking-item:hover {
+      background-color: #f8fafc;
+    }
+
+    .tracking-status {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 1rem;
+    }
+
+    .status-on-track {
+      background: #f0fdf4;
+      color: var(--success-color);
+    }
+
+    .status-warning {
+      background: #fff7ed;
+      color: var(--warning-color);
+    }
+
+    .status-off-track {
+      background: #fef2f2;
+      color: var(--danger-color);
+    }
+
+    .tracking-info {
+      flex: 1;
+    }
+
+    .tracking-name {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .tracking-location {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .tracking-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-right: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-outline {
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-primary);
+    }
+
+    .btn-outline:hover {
+      background: #f8fafc;
+    }
+
+    .btn-warning {
+      background: var(--warning-color);
+      color: white;
+    }
+
+    .btn-danger {
+      background: var(--danger-color);
+      color: white;
+    }
+
+    /* Charts */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .chart-card {
+      background: var(--card-background);
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chart-header {
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Filters */
+    .filter-select {
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      background: white;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* RESPONSIVE MEDIA QUERIES */
+    @media (max-width: 768px) {
+      /* Hide sidebar by default on mobile (slide off screen) */
+      .sidebar {
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar.active {
+        transform: translateX(0);
+      }
+
+      /* Make main content full width */
+      .main-content {
+        margin-right: 0;
+        width: 100%;
+        padding: 1rem;
+      }
+
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      /* Smaller map height if desired; adjust as needed */
+      .map-placeholder {
+        height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <i data-lucide="eye"></i>
+          <span>پنل ناظر</span>
+        </div>
+      </div>
+      <nav class="sidebar-menu">
+        <div class="menu-item active">
+          <i data-lucide="map"></i>
+          <span class="menu-label">نظارت GPS</span>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="activity"></i>
+          <span class="menu-label">تحلیل عملکرد</span>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="alert-triangle"></i>
+          <span class="menu-label">هشدارها</span>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="file-text"></i>
+          <span class="menu-label">گزارش‌ها</span>
+        </div>
+        <div class="menu-item">
+          <i data-lucide="users"></i>
+          <span class="menu-label">بازاریاب‌ها</span>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <div class="content-header">
+        <!-- Mobile sidebar toggle button will be injected here by JS if needed -->
+        <h1 class="page-title">نظارت GPS</h1>
+        <div class="header-actions">
+          <button class="btn btn-outline" id="refreshBtn">
+            <i data-lucide="refresh-cw"></i>
+            <span>بروزرسانی</span>
+          </button>
+          <button class="btn btn-primary">
+            <i data-lucide="download"></i>
+            <span>دانلود گزارش</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Map Section -->
+      <div class="map-section">
+        <div class="map-header">
+          <h2 class="section-title">موقعیت بازاریاب‌ها</h2>
+          <div class="list-filters">
+            <select class="filter-select">
+              <option>همه مناطق</option>
+              <option>منطقه ۱</option>
+              <option>منطقه ۲</option>
+              <option>منطقه ۳</option>
+            </select>
+          </div>
+        </div>
+        <div class="map-placeholder">
+          نقشه موقعیت بازاریاب‌ها
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <h3 class="stat-title">بازاریاب‌های فعال</h3>
+            <div class="stat-icon">
+              <i data-lucide="users"></i>
+            </div>
+          </div>
+          <div class="stat-value">۱۸ نفر</div>
+          <div class="stat-trend trend-positive">
+            <i data-lucide="trending-up"></i>
+            <span>۸۵٪ حضور</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <h3 class="stat-title">هشدارهای فعال</h3>
+            <div class="stat-icon">
+              <i data-lucide="alert-triangle"></i>
+            </div>
+          </div>
+          <div class="stat-value">۵ مورد</div>
+          <div class="stat-trend trend-negative">
+            <i data-lucide="trending-up"></i>
+            <span>۳ مورد عدم تطابق مسیر</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <h3 class="stat-title">پیشرفت فروش</h3>
+            <div class="stat-icon">
+              <i data-lucide="pie-chart"></i>
+            </div>
+          </div>
+          <div class="stat-value">۷۵٪</div>
+          <div class="stat-trend trend-positive">
+            <i data-lucide="trending-up"></i>
+            <span>۵٪ بالاتر از هدف</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3 class="chart-title">عملکرد بازدید روزانه</h3>
+            <select class="filter-select">
+              <option>امروز</option>
+              <option>هفته جاری</option>
+              <option>ماه جاری</option>
+            </select>
+          </div>
+          <canvas id="visitsChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3 class="chart-title">توزیع هشدارها</h3>
+          </div>
+          <canvas id="alertsChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tracking List -->
+      <div class="tracking-list">
+        <div class="tracking-header">
+          <h3 class="section-title">وضعیت بازاریاب‌ها</h3>
+          <div class="list-filters">
+            <select class="filter-select">
+              <option>همه بازاریاب‌ها</option>
+              <option>در مسیر</option>
+              <option>خارج از مسیر</option>
+              <option>غیرفعال</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tracking Items -->
+        <div class="tracking-item">
+          <div class="tracking-status status-on-track">
+            <i data-lucide="check-circle"></i>
+          </div>
+          <div class="tracking-info">
+            <div class="tracking-name">علی محمدی</div>
+            <div class="tracking-location">در مسیر - خیابان ولیعصر</div>
+          </div>
+          <div class="tracking-actions">
+            <button class="btn btn-outline">
+              <i data-lucide="map-pin"></i>
+              <span>مشاهده</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tracking-item">
+          <div class="tracking-status status-warning">
+            <i data-lucide="alert-circle"></i>
+          </div>
+          <div class="tracking-info">
+            <div class="tracking-name">رضا کریمی</div>
+            <div class="tracking-location">تاخیر در بازدید - میدان ونک</div>
+          </div>
+          <div class="tracking-actions">
+            <button class="btn btn-warning">
+              <i data-lucide="phone"></i>
+              <span>تماس</span>
+            </button>
+            <button class="btn btn-outline">
+              <i data-lucide="map-pin"></i>
+              <span>مشاهده</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tracking-item">
+          <div class="tracking-status status-off-track">
+            <i data-lucide="x-circle"></i>
+          </div>
+          <div class="tracking-info">
+            <div class="tracking-name">مریم احمدی</div>
+            <div class="tracking-location">خارج از مسیر - سعادت آباد</div>
+          </div>
+          <div class="tracking-actions">
+            <button class="btn btn-danger">
+              <i data-lucide="alert-triangle"></i>
+              <span>هشدار</span>
+            </button>
+            <button class="btn btn-outline">
+              <i data-lucide="map-pin"></i>
+              <span>مشاهده</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Visits Chart
+    const visitsCtx = document.getElementById('visitsChart').getContext('2d');
+    const visitsChart = new Chart(visitsCtx, {
+      type: 'line',
+      data: {
+        labels: ['۸:۰۰', '۱۰:۰۰', '۱۲:۰۰', '۱۴:۰۰', '۱۶:۰۰', '۱۸:۰۰'],
+        datasets: [{
+          label: 'بازدیدهای انجام شده',
+          data: [5, 12, 18, 25, 30, 35],
+          borderColor: '#7c3aed',
+          tension: 0.4,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        // If you want the chart to be more flexible in height on mobile:
+        // maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            rtl: true,
+            labels: {
+              font: {
+                family: 'Vazirmatn'
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              font: {
+                family: 'Vazirmatn'
+              }
+            }
+          },
+          x: {
+            ticks: {
+              font: {
+                family: 'Vazirmatn'
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Alerts Chart
+    const alertsCtx = document.getElementById('alertsChart').getContext('2d');
+    const alertsChart = new Chart(alertsCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['عدم تطابق مسیر', 'تاخیر در بازدید', 'عدم حضور', 'سایر'],
+        datasets: [{
+          data: [40, 30, 20, 10],
+          backgroundColor: [
+            '#ef4444',
+            '#f97316',
+            '#eab308',
+            '#94a3b8'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        // maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            rtl: true,
+            labels: {
+              font: {
+                family: 'Vazirmatn'
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Sidebar menu highlighting
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // Refresh button animation
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      const icon = document.querySelector('#refreshBtn i');
+      icon.style.transition = 'transform 0.5s ease';
+      icon.style.transform = 'rotate(360deg)';
+      setTimeout(() => {
+        icon.style.transform = 'rotate(0deg)';
+      }, 500);
+    });
+
+    // Handle filter changes
+    document.querySelectorAll('.filter-select').forEach(filter => {
+      filter.addEventListener('change', (e) => {
+        console.log('Filter changed:', e.target.value);
+        // Here you would typically update the relevant data
+      });
+    });
+
+    // RESPONSIVE SIDEBAR TOGGLE
+    function setupResponsive() {
+      const sidebar = document.querySelector('.sidebar');
+
+      // If on mobile size, show a toggle button if it doesn't exist yet.
+      if (window.innerWidth < 768) {
+        // Create mobile toggle if not present
+        if (!document.querySelector('.mobile-toggle')) {
+          const toggleBtn = document.createElement('button');
+          toggleBtn.className = 'btn btn-outline mobile-toggle';
+          toggleBtn.innerHTML = '<i data-lucide="menu"></i>';
+
+          // Insert toggle at the beginning of the header actions or content-header
+          document.querySelector('.content-header').prepend(toggleBtn);
+
+          // Re‑initialize icons inside the newly created button
+          lucide.createIcons();
+
+          toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+          });
+
+          // Close sidebar when clicking outside
+          document.addEventListener('click', (event) => {
+            // If click is NOT inside the sidebar and NOT on the toggle button
+            if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+              sidebar.classList.remove('active');
+            }
+          });
+        }
+      } else {
+        // On larger screens, ensure sidebar is always visible
+        sidebar.classList.remove('active');
+
+        // Remove the mobile toggle if it exists
+        const toggleBtn = document.querySelector('.mobile-toggle');
+        if (toggleBtn) {
+          toggleBtn.remove();
+        }
+      }
+    }
+
+    window.addEventListener('resize', setupResponsive);
+    window.addEventListener('load', setupResponsive);
+    setupResponsive();
+  </script>
+</body>
+</html>
